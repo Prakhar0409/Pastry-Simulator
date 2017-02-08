@@ -1,9 +1,11 @@
 package dht1;
 
 public class Message {
+	Node srcNode;
+	Node destNode;
 	int srcId;
 	int destId;
-	String srcAddr;
-	String key;
+	
+	long key;
 	String type; 	//"join","forward"
 }
