@@ -106,11 +106,35 @@ public class Node implements Runnable{
                     break;
                 case "info":
                 	System.out.println("Message of type info route key: "+ msg.key);
-                	updateTables(msg);
+                	updateTables(msg.srcNode);
                 case "lastinfo":
                 	System.out.println("Message of type info route key: "+ msg.key);
-                	updateTables(msg);
-                	updateLeafSet(msg);
+                	updateTables(msg.srcNode);
+                	updateLeafSet(msg.srcNode);
+                	//send the new node update to all the known nodes
+                	Message m1 = new Message("newnode",this);
+                	for(int i=0;i<this.l_lset.size();i++){
+                		if(this.l_lset.get(i) != null){
+                			this.l_lset.get(i).addMessage(m1);
+                		}
+                	}
+                	for(int i=0;i<this.r_lset.size();i++){
+                		if(this.r_lset.get(i) != null){
+                			this.r_lset.get(i).addMessage(m1);
+                		}
+                	}
+                	for(int i=0;i<this.n_set.size();i++){
+                		if(this.n_set.get(i) != null){
+                			this.n_set.get(i).addMessage(m1);
+                		}
+                	}
+                	for(int i=0;i<rows;i++){
+                		for(int j=0;j<base;j++){
+                			if(this.r_table[i][j]!=null){
+                				this.r_table[i][j].addMessage(m1);
+                			}
+                		}
+                	}
                 	//all initialisations for this node done.
                 default:
 
@@ -118,23 +142,23 @@ public class Node implements Runnable{
     	}
     }
     
-    public void updateLeafSet(Message msg){
-    	if(node_id<msg.srcNode.node_id){
-    		this.l_lset.add(msg.srcNode);		//add Z to leaf set
+    public void updateLeafSet(Node n){
+    	if(node_id<n.node_id){
+    		this.l_lset.add(n);		//add Z to leaf set
     	}else{
-    		this.r_lset.add(msg.srcNode);		//add Z to leaf set
+    		this.r_lset.add(n);		//add Z to leaf set
     	}
-		for(int i=0;i<msg.srcNode.l_lset.size();i++){
+		for(int i=0;i<n.l_lset.size();i++){
 			if(this.l_lset.size()>=L/2){
 				break;
 			}
-			this.l_lset.add(msg.srcNode.l_lset.get(i));	//update X left leaf set
+			this.l_lset.add(n.l_lset.get(i));	//update X left leaf set
 		}
-		for(int i=0;i<msg.srcNode.r_lset.size();i++){
+		for(int i=0;i<n.r_lset.size();i++){
 			if(this.r_lset.size()>=L/2){
 				break;
 			}
-			this.r_lset.add(msg.srcNode.r_lset.get(i));	//update X right leaf set
+			this.r_lset.add(n.r_lset.get(i));	//update X right leaf set
 		}
     }
 
@@ -143,19 +167,19 @@ public class Node implements Runnable{
     	return 0;
     }
     
-    public void updateTables(Message msg){
-    	int l = sharedPrefix(this.node_id,msg.srcNode.node_id);
+    public void updateTables(Node n){
+    	int l = sharedPrefix(this.node_id,n.node_id);
     	for(int i=0;i<l;i++){
     		for(int j=0;j<base;j++){
     			if(this.r_table[i][j]==null){
-    				this.r_table[i][j] = msg.srcNode.r_table[i][j];
-    			}else if(msg.srcNode.r_table[i][j]!=null && dist_phy(this,this.r_table[i][j])>dist_phy(this,msg.srcNode.r_table[i][j])){
-    				this.r_table[i][j] = msg.srcNode.r_table[i][j];
+    				this.r_table[i][j] = n.r_table[i][j];
+    			}else if(n.r_table[i][j]!=null && dist_phy(this,this.r_table[i][j])>dist_phy(this,n.r_table[i][j])){
+    				this.r_table[i][j] = n.r_table[i][j];
     			}
     		}
     	}
     	for(int j=0;j<base;j++){
-    		this.r_table[l][j] = msg.srcNode.r_table[l][j];
+    		this.r_table[l][j] = n.r_table[l][j];
     	}
     	int dl = 0;
     	if(this.str_node_id.charAt(l)>='0' && this.str_node_id.charAt(l)<='9'){
