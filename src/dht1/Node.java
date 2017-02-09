@@ -48,7 +48,7 @@ public class Node implements Runnable{
     public void start(){
     	th = Thread.currentThread();
     	public_addr = th.getName();
-    	node_id = this.hashCode()%maxNodes;
+//    	node_id = this.hashCode()%maxNodes;
         str_node_id = Long.toString(node_id,base);
         while(this.str_node_id.length()<4){
         	this.str_node_id = '0'+this.str_node_id;
@@ -209,6 +209,14 @@ public class Node implements Runnable{
     			this.r_lset.remove(this.r_lset.size()-1);
     		}
     	}
+    	
+    	//this cases is required only while starting network on the first node
+    	if(this.l_lset.isEmpty()){
+			this.l_lset.add(n);
+		}
+		if(this.r_lset.isEmpty()){
+			this.r_lset.add(n);
+		}
 //    	for(int i=0;i<this.l_lset.size();i++){
 //    		if(this.l_lset.get(i)!=null && this.l_lset.get(i).node_id!=n.node_id){
 ////    			System.out.println(this.node_id+": Send update leafset:");
@@ -236,13 +244,26 @@ public class Node implements Runnable{
 				break;
 			}
 			this.l_lset.add(n.l_lset.get(i));	//update X left leaf set
+			System.out.println(this.node_id+": added to left leaf set: "+n.node_id);
 		}
 		for(int i=0;i<n.r_lset.size();i++){
 			if(this.r_lset.size()>=L/2){
 				break;
 			}
 			this.r_lset.add(n.r_lset.get(i));	//update X right leaf set
+			System.out.println(this.node_id+": added to right leaf set: "+n.node_id);
 		}
+		if(this.l_lset.isEmpty()){
+			this.l_lset.add(n);
+		}
+		if(this.r_lset.isEmpty()){
+			this.r_lset.add(n);
+		}
+//		if(this.l_lset.isEmpty() && !this.r_lset.isEmpty()){
+//			Node biggerN = this.r_lset.lastElement();
+//			
+//			Node bigBiggerN = biggerN.
+//		}
     }
 
     public double dist_phy(Node a,Node b){
@@ -352,16 +373,17 @@ public class Node implements Runnable{
             return false;
         }
         // if not in leaf set now go to routing table
-        int l = sharedPrefix(this.node_id,msg.key);
-        System.out.println(this.node_id+": str_node_id:"+this.str_node_id+" msg_id:"+msg.str_key+" prefix:"+l);
-        String key_str = msg.str_key;
-         char x = key_str.charAt(l);
-         int dl=0;
-         if(x>='0' && x<='9'){
-        	 dl = x-'0';
-         }else{
-        	 dl = x-'a'+10;
-         }
+	    int l = sharedPrefix(this.node_id,msg.key);
+	    System.out.println(this.node_id+": str_node_id:"+this.str_node_id+" msg_id:"+msg.str_key+" prefix:"+l);
+	    if(key_size/base <= l){return true;}
+	    String key_str = msg.str_key;
+	    char x = key_str.charAt(l);
+	    int dl=0;
+	    if(x>='0' && x<='9'){
+	    	dl = x-'0';
+	    }else{
+        	dl = x-'a'+10;
+        }
          
          if(this.r_table[l][dl]!=null && this.r_table[l][dl]==this){
         	 return true;
