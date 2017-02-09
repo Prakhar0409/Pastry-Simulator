@@ -449,6 +449,54 @@ public class Node implements Runnable{
             return false;
         }
     }
+    
+    public void printNodeState(Node n){
+    	System.out.println("######################################################################");
+    	System.out.println("Node id: "+n.node_id+" ("+n.str_node_id+")");
+    	System.out.println("Leaf Set");
+    	for(int i=0;i<n.l_lset.size();i++){
+    		if(n.l_lset.get(i)!=null){
+    			System.out.print(n.l_lset.get(i).node_id+" ("+n.l_lset.get(i).str_node_id+"), ");
+    		}else{
+    			System.out.print("null, ");
+    		}
+    	}
+    	System.out.print(" || ");
+    	for(int i=0;i<n.l_lset.size();i++){
+    		if(n.r_lset.get(i)!=null){
+    			System.out.print(n.r_lset.get(i).node_id+" ("+n.r_lset.get(i).str_node_id+"), ");
+    		}else{
+    			System.out.print("null, ");
+    		}
+    	}
+    	System.out.println();
+    	
+    	System.out.println("Neigbourhood Set");
+    	for(int i=0;i<n.n_set.size();i++){
+    		if(n.n_set.get(i)!=null){
+    			System.out.print(n.n_set.get(i).node_id+" ("+n.n_set.get(i).str_node_id+"), ");
+    		}else{
+    			System.out.print("null, ");
+    		}
+    	}
+    	System.out.println();
+    	System.out.println("Routing table");
+    	for(int j=0;j<base;j++){
+    		System.out.print(j+" \t\t");
+    	}
+    	System.out.println();
+    	for(int i=0;i<rows;i++){
+    		for(int j=0;j<base;j++){
+    			if(n.r_table[i][j]!=null){
+    				System.out.print(n.r_table[i][j].node_id+" ("+n.r_table[i][j].str_node_id+"), \t");
+    			}else{
+        			System.out.print("null value, \t");
+        		}
+    		}
+    		System.out.println();
+    	}
+    	System.out.println("**********************************************************************");
+    }
 
     private static byte[] generateRandomID(int length) {
         Random random = new Random();
