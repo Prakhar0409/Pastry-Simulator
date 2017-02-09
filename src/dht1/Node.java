@@ -137,7 +137,7 @@ public class Node implements Runnable{
                 	}
                 	for(int i=0;i<rows;i++){
                 		for(int j=0;j<base;j++){
-                			if(this.r_table[i][j]!=null && this.r_table[i][j]!=this){
+                			if(this.r_table[i][j]!=null && this.r_table[i][j].node_id!=this.node_id){	//preventing from nulls and self sends
                 				Message m1 = new Message("newnode_rt",this);
                 				this.r_table[i][j].addMessage(m1);
                 			}
@@ -176,48 +176,49 @@ public class Node implements Runnable{
     	return false;
     }
     
+    public boolean smallerThanForKeys(long a,long b){
+    	return this.greaterThanForKeys(b, a);
+    }
+    
     public void updateLeafFromNewNode(Node n,Message m){
-    	if(this.node_id>n.node_id){
+    	if(this.greaterThanForKeys(this.node_id,n.node_id)){		//big on the circle like 0>2^31
     		//update to left leaf set
     		int i=0;
-    		while(i<this.l_lset.size() && this.l_lset.get(i).node_id>n.node_id){
+    		while(i<this.l_lset.size() && this.greaterThanForKeys(this.l_lset.get(i).node_id,n.node_id)){
     			i++;
     		}
-    		if(!this.l_lset.isEmpty() && this.l_lset.get(i).node_id == this.node_id){
-    			return;
-    		}
-    		if(i<L/2){
-    			this.l_lset.add(i,n);
-    		}
+//    		if(!this.l_lset.isEmpty() && this.l_lset.get(i).node_id == this.node_id){
+//    			return;
+//    		}
+    		this.l_lset.add(i,n);
     		while(this.l_lset.size()>L/2){
     			this.l_lset.remove(this.l_lset.size()-1);
     		}
     	}else{
     		//update to right leaf set
     		int i=0;
-    		while(i<this.r_lset.size() && this.r_lset.get(i).node_id<n.node_id){
+    		while(i<this.r_lset.size() && this.smallerThanForKeys(this.r_lset.get(i).node_id,n.node_id)){
     			i++;
     		}
-    		if(!this.r_lset.isEmpty() && this.r_lset.get(i).node_id == this.node_id){
-    			return;
-    		}
-    		if(i<L/2){
-    			this.r_lset.add(i,n);
-    		}
+//    		if(!this.r_lset.isEmpty() && this.r_lset.get(i).node_id == this.node_id){
+//    			return;
+//    		}    		
+    		this.r_lset.add(i,n);    		
     		while(this.r_lset.size()>L/2){
     			this.r_lset.remove(this.r_lset.size()-1);
     		}
     	}
-    	for(int i=0;i<this.l_lset.size();i++){
-    		if(this.l_lset.get(i)!=null){
-    			this.l_lset.get(i).addMessage(m);
-    		}
-    	}
-    	for(int i=0;i<this.l_lset.size();i++){
-    		if(this.r_lset.get(i)!=null){
-    			this.l_lset.get(i).addMessage(m);
-    		}
-    	}
+//    	for(int i=0;i<this.l_lset.size();i++){
+//    		if(this.l_lset.get(i)!=null && this.l_lset.get(i).node_id!=n.node_id){
+////    			System.out.println(this.node_id+": Send update leafset:");
+//    			this.l_lset.get(i).addMessage(m);
+//    		}
+//    	}
+//    	for(int i=0;i<this.r_lset.size();i++){
+//    		if(this.r_lset.get(i)!=null && this.r_lset.get(i).node_id!=n.node_id){
+//    			this.r_lset.get(i).addMessage(m);
+//    		}
+//    	}
     }
     
     //initialises leafset of new node based on the nearest neighbour in the nodeId space

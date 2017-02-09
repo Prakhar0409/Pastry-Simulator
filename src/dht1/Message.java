@@ -30,6 +30,14 @@ public class Message {
 		}
 	}
 	
+	public Message(String type,Node src,long key){
+		this.type = type;
+		this.srcNode = src;
+		this.level = 0;
+		this.key = key;
+		this.str_key = Long.toString(key,Node.base);
+	}
+	
 	public Message(String type,int level,Node src){
 		this.type = type;
 		this.srcNode = src;
