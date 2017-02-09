@@ -25,7 +25,7 @@ public class Node implements Runnable{
     String str_node_id;
 	public String public_addr;	//ip or  other public name also the thread name
 	Node[][] r_table = new Node[rows][base];		//routing table
-	Vector<Node> l_lset = new Vector<Node>();			//leaf set smaller
+	Vector<Node> l_lset = new Vector<Node>();			//leaf set smaller- left leaf set has smaller ids
 	Vector<Node> r_lset = new Vector<Node>();			//leaf set bigger
 	Vector<Node> n_set = new Vector<Node>();			//neighbourhood set
 	Thread th;
@@ -172,7 +172,7 @@ public class Node implements Runnable{
     	if(tmp1<0){tmp1 += maxNodes;}
     	long tmp2 = b-a;
     	if(tmp2<0){tmp2 += maxNodes;}
-    	if(tmp1>tmp2){return true;}		//a is bigger than b
+    	if(tmp1<tmp2){return true;}		//a is bigger than b draw a circle with 8 nodes and check:P
     	return false;
     }
     
@@ -181,8 +181,9 @@ public class Node implements Runnable{
     }
     
     public void updateLeafFromNewNode(Node n,Message m){
-    	if(this.greaterThanForKeys(this.node_id,n.node_id)){		//big on the circle like 0>2^31
+    	if(this.greaterThanForKeys(this.node_id,n.node_id)){	//if my.id > n.id then add n to lesser leaf set
     		//update to left leaf set
+//    		System.out.println(this.node_id+": inside update Leaf Set if");
     		int i=0;
     		while(i<this.l_lset.size() && this.greaterThanForKeys(this.l_lset.get(i).node_id,n.node_id)){
     			i++;
@@ -223,10 +224,12 @@ public class Node implements Runnable{
     
     //initialises leafset of new node based on the nearest neighbour in the nodeId space
     public void updateLeafSet(Node n){
-    	if(node_id<n.node_id){
-    		this.l_lset.add(n);		//add Z to leaf set
+    	if(this.smallerThanForKeys(this.node_id, n.node_id)){		//if my key less than the other node
+    		System.out.println(this.node_id+": inside update Leaf Set my key smaller than: "+n.node_id);
+    		this.r_lset.add(n);		//add Z or n to right/bigger leaf set
     	}else{
-    		this.r_lset.add(n);		//add Z to leaf set
+    		System.out.println(this.node_id+": inside update Leaf Set my key bigger than "+n.node_id);
+    		this.l_lset.add(n);		//add Z to leaf set
     	}
 		for(int i=0;i<n.l_lset.size();i++){
 			if(this.l_lset.size()>=L/2){
@@ -462,7 +465,7 @@ public class Node implements Runnable{
     		}
     	}
     	System.out.print(" || ");
-    	for(int i=0;i<n.l_lset.size();i++){
+    	for(int i=0;i<n.r_lset.size();i++){
     		if(n.r_lset.get(i)!=null){
     			System.out.print(n.r_lset.get(i).node_id+" ("+n.r_lset.get(i).str_node_id+"), ");
     		}else{

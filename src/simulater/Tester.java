@@ -21,16 +21,20 @@ public class Tester {
 		n1.known = n;
 		n1.public_addr = "10.208.1.99";
 		test.addNode(n1);
-		
-		t.sleep(3000);
-		System.out.println("\n\n\n\n");
-		System.out.println("Nodes: 2");
-		n1 = new Node();
-		n1.known = n;
-		n1.public_addr = "3.72.93.2";
-		test.addNode(n1);
 		t.sleep(500);
 		n.printNodeState(n);
+//		t.sleep(500);
+		n.printNodeState(n1);
+		
+//		t.sleep(3000);
+//		System.out.println("\n\n\n\n");
+//		System.out.println("Nodes: 2");
+//		n1 = new Node();
+//		n1.known = n;
+//		n1.public_addr = "3.72.93.2";
+//		test.addNode(n1);
+//		t.sleep(500);
+//		n.printNodeState(n);
 		while(true);
 	}
 	
