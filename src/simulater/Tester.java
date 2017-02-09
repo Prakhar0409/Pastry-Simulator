@@ -29,7 +29,7 @@ public class Tester {
 		t.sleep(3000);
 		System.out.println("\n\n\n\n");
 		System.out.println("Nodes: 2");
-		Node n2 = new Node(17050);
+		Node n2 = new Node(30001);
 		n2.known = n;
 		n2.public_addr = "3.72.93.2";
 		test.addNode(n2);

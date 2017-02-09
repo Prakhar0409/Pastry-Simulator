@@ -109,6 +109,7 @@ public class Node implements Runnable{
                     break;
                 case "info":
                 	updateTables(msg.srcNode);
+                	break;
                 case "lastinfo":
                 	//all initialisations for this node 
                 	updateTables(msg.srcNode);
@@ -116,7 +117,7 @@ public class Node implements Runnable{
                 	updateLeafSet(msg.srcNode);
                 	System.out.println(this.node_id+": Updated Leaf sets");
                 	//send the new node update to all the known nodes
-                	                	
+                	System.out.println(this.node_id+": Sending new-node-update message to others nodes i know");
                 	for(int i=0;i<this.l_lset.size();i++){
                 		if(this.l_lset.get(i) != null){
                 			Message m1 = new Message("newnode_rl",this);
@@ -143,7 +144,6 @@ public class Node implements Runnable{
                 			}
                 		}
                 	}
-                	System.out.println(this.node_id+": Sent new-node-update message to others");
                 	break;
                 case "newnode_ll":
                 	updateLeafFromNewNode(msg.srcNode,msg);
@@ -326,19 +326,20 @@ public class Node implements Runnable{
     // returns true if this is the last node else false
     public boolean route(Message msg){
         //check leaf set
-    	long least=0,greatest;
+    	long smallest=0,greatest;
     	if(l_lset.isEmpty()){
-    		least = this.node_id;
+    		smallest = this.node_id;
     	}else{
-    		least = l_lset.lastElement().node_id;
+    		smallest = l_lset.lastElement().node_id;
     	}
     	if(r_lset.isEmpty()){
     		greatest = this.node_id;
     	}else{
     		greatest = r_lset.lastElement().node_id;
     	}
-    	System.out.println(this.node_id+ ": left neigh:"+least+" right_neigh:"+greatest);
-        if( this.greaterThanForKeys(msg.key,least)  && this.greaterThanForKeys(greatest,msg.key)){
+    	System.out.println(this.node_id+ ": left neigh:"+smallest+" right_neigh:"+greatest);
+    	// if smallest == greatest => only 2 nodes in system and every keys falls in our range
+        if( smallest==greatest || (this.greaterThanForKeys(msg.key,smallest)  && this.greaterThanForKeys(greatest,msg.key))){
             int where = 0;		//-1=left; 1=right
             long min_dist= dist_key(this.node_id, msg.key),tmp_dist;
             int min_idx=0;
