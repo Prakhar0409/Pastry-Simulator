@@ -23,11 +23,11 @@ public class Node implements Runnable{
 	//State information
 	long node_id;		// Unique node id for each node
     String str_node_id;
-	String public_addr;	//ip or  other public name also the thread name
+	public String public_addr;	//ip or  other public name also the thread name
 	Node[][] r_table = new Node[rows][base];		//routing table
-	Vector<Node> l_lset = new Vector<Node>();			//leaf set
-	Vector<Node> r_lset = new Vector<Node>();			//leaf set
-	Vector<Node> n_set;			//neighbourhood set
+	Vector<Node> l_lset = new Vector<Node>();			//leaf set smaller
+	Vector<Node> r_lset = new Vector<Node>();			//leaf set bigger
+	Vector<Node> n_set = new Vector<Node>();			//neighbourhood set
 	Thread th;
 	public Node known;
 	
@@ -38,7 +38,7 @@ public class Node implements Runnable{
     	byte[] id;
         id = generateRandomID(key_size/8);  //length in bytes
         this.node_id = convertBytesToInt(id);
-        System.out.println("Node id is: "+node_id);
+//        System.out.println("Node id is: "+node_id);
     }
 
     public Node(long nodeid){
@@ -50,8 +50,11 @@ public class Node implements Runnable{
     	public_addr = th.getName();
     	node_id = this.hashCode()%maxNodes;
         str_node_id = Long.toString(node_id,base);
-        System.out.println("Node id: "+ node_id);
-        System.out.println("Node id in base: "+ base + " : "+str_node_id);
+        while(this.str_node_id.length()<4){
+        	this.str_node_id = '0'+this.str_node_id;
+        }
+        System.out.println("Node id: "+ node_id+" str: "+this.str_node_id+"  rows:"+rows);
+//        System.out.println("Node id in base: "+ base + " : "+str_node_id);
 //    	node_id = public_addr.hashCode()%maxNodes;
 //        this.l_lset.add(this);
 //        this.r_lset.add(this);
@@ -69,7 +72,7 @@ public class Node implements Runnable{
         if(known!=null){
         	Message m = new Message("join",this);
         	known.addMessage(m);					//X sent a join message to A
-        	updateNeighbours(known);
+        	updateNeighbourSet(known);
         }
     }
 
@@ -78,70 +81,146 @@ public class Node implements Runnable{
      */
     public void run() {
     	
-    	System.out.println("Hey fron new node: "+ Thread.currentThread().getName());
+//    	System.out.println("Hey fron new node: "+ Thread.currentThread().getName());
     	this.start();		//Node join
-    	System.out.println("Node "+ this.node_id+" initialized");
+    	System.out.println(this.node_id + ": Node initialized");
     	while(true){
     		Message msg = getNextMessage();
     		if(msg==null){
     			continue;
     		}
+    		System.out.println(this.node_id +": Received message-> type:"+ msg.type+" src:"+msg.srcNode.node_id+" key:"+msg.key);
+    		msg.level+=1;
             switch (msg.type) {
                 case "join":
-                	System.out.println("Request to join from node: "+ msg.srcNode.node_id);
                 	boolean f = route(msg);
                 	Message m;
                 	if(f){
-                		m = new Message("lastinfo",msg.level+1,this);		//send state info
+                		m = new Message("lastinfo",msg.level,this,msg.srcNode.node_id);		//send state info
                 	}else{
-                		m = new Message("info",msg.level+1,this);		//send state info
+                		m = new Message("info",msg.level,this,msg.srcNode.node_id);		//send state info
                 	}
                     msg.srcNode.addMessage(m);					//send state info directly to x
-                    msg.level += 1;
+//                    msg.level += 1;
                     
                     break;
                 case "forward":
-                    System.out.println("Message to route key: "+ msg.key);
                     route(msg);
                     break;
                 case "info":
-                	System.out.println("Message of type info route key: "+ msg.key);
                 	updateTables(msg.srcNode);
                 case "lastinfo":
-                	System.out.println("Message of type info route key: "+ msg.key);
+                	//all initialisations for this node 
                 	updateTables(msg.srcNode);
+                	System.out.println(this.node_id+": Updated routing tables");
                 	updateLeafSet(msg.srcNode);
+                	System.out.println(this.node_id+": Updated Leaf sets");
                 	//send the new node update to all the known nodes
-                	Message m1 = new Message("newnode",this);
+                	                	
                 	for(int i=0;i<this.l_lset.size();i++){
                 		if(this.l_lset.get(i) != null){
+                			Message m1 = new Message("newnode_rl",this);
                 			this.l_lset.get(i).addMessage(m1);
                 		}
                 	}
                 	for(int i=0;i<this.r_lset.size();i++){
                 		if(this.r_lset.get(i) != null){
+                			Message m1 = new Message("newnode_ll",this);
                 			this.r_lset.get(i).addMessage(m1);
                 		}
                 	}
                 	for(int i=0;i<this.n_set.size();i++){
                 		if(this.n_set.get(i) != null){
+                			Message m1 = new Message("newnode_n",this);
                 			this.n_set.get(i).addMessage(m1);
                 		}
                 	}
                 	for(int i=0;i<rows;i++){
                 		for(int j=0;j<base;j++){
-                			if(this.r_table[i][j]!=null){
+                			if(this.r_table[i][j]!=null && this.r_table[i][j]!=this){
+                				Message m1 = new Message("newnode_rt",this);
                 				this.r_table[i][j].addMessage(m1);
                 			}
                 		}
                 	}
-                	//all initialisations for this node done.
+                	System.out.println(this.node_id+": Sent new-node-update message to others");
+                	break;
+                case "newnode_ll":
+                	updateLeafFromNewNode(msg.srcNode,msg);
+                	updateTables(msg.srcNode);
+                	break;
+                case "newnode_rl":
+                	updateLeafFromNewNode(msg.srcNode,msg);
+                	updateTables(msg.srcNode);
+                	break;
+                case "newnode_rt":
+                	updateTables(msg.srcNode);
+                	break;
+                case "newnode_n":
+                	break;
                 default:
 
             }
     	}
     }
     
+    /*
+     * Returns true if key->a > key->b
+     * */
+    public boolean greaterThanForKeys(long a,long b){
+    	long tmp1 = a-b;
+    	if(tmp1<0){tmp1 += maxNodes;}
+    	long tmp2 = b-a;
+    	if(tmp2<0){tmp2 += maxNodes;}
+    	if(tmp1>tmp2){return true;}		//a is bigger than b
+    	return false;
+    }
+    
+    public void updateLeafFromNewNode(Node n,Message m){
+    	if(this.node_id>n.node_id){
+    		//update to left leaf set
+    		int i=0;
+    		while(i<this.l_lset.size() && this.l_lset.get(i).node_id>n.node_id){
+    			i++;
+    		}
+    		if(!this.l_lset.isEmpty() && this.l_lset.get(i).node_id == this.node_id){
+    			return;
+    		}
+    		if(i<L/2){
+    			this.l_lset.add(i,n);
+    		}
+    		while(this.l_lset.size()>L/2){
+    			this.l_lset.remove(this.l_lset.size()-1);
+    		}
+    	}else{
+    		//update to right leaf set
+    		int i=0;
+    		while(i<this.r_lset.size() && this.r_lset.get(i).node_id<n.node_id){
+    			i++;
+    		}
+    		if(!this.r_lset.isEmpty() && this.r_lset.get(i).node_id == this.node_id){
+    			return;
+    		}
+    		if(i<L/2){
+    			this.r_lset.add(i,n);
+    		}
+    		while(this.r_lset.size()>L/2){
+    			this.r_lset.remove(this.r_lset.size()-1);
+    		}
+    	}
+    	for(int i=0;i<this.l_lset.size();i++){
+    		if(this.l_lset.get(i)!=null){
+    			this.l_lset.get(i).addMessage(m);
+    		}
+    	}
+    	for(int i=0;i<this.l_lset.size();i++){
+    		if(this.r_lset.get(i)!=null){
+    			this.l_lset.get(i).addMessage(m);
+    		}
+    	}
+    }
+    
+    //initialises leafset of new node based on the nearest neighbour in the nodeId space
     public void updateLeafSet(Node n){
     	if(node_id<n.node_id){
     		this.l_lset.add(n);		//add Z to leaf set
@@ -169,7 +248,8 @@ public class Node implements Runnable{
     
     public void updateTables(Node n){
     	int l = sharedPrefix(this.node_id,n.node_id);
-    	for(int i=0;i<l;i++){
+    	System.out.println(this.node_id+": updating tables with node:"+n.node_id+" prefix:"+l);
+    	for(int i=0;i<l+1 && i<rows;i++){
     		for(int j=0;j<base;j++){
     			if(this.r_table[i][j]==null){
     				this.r_table[i][j] = n.r_table[i][j];
@@ -178,19 +258,21 @@ public class Node implements Runnable{
     			}
     		}
     	}
-    	for(int j=0;j<base;j++){
-    		this.r_table[l][j] = n.r_table[l][j];
+//    	for(int j=0;j<base;j++){
+//    		this.r_table[l][j] = n.r_table[l][j];
+//    	}
+    	if(l<this.str_node_id.length()){
+	    	int dl = 0;
+	    	if(this.str_node_id.charAt(l)>='0' && this.str_node_id.charAt(l)<='9'){
+	    		dl = this.str_node_id.charAt(l) - '0'; 
+	    	}else{
+	    		dl = this.str_node_id.charAt(l) - 'a' + 10;
+	    	}
+	    	this.r_table[l][dl] = this;
     	}
-    	int dl = 0;
-    	if(this.str_node_id.charAt(l)>='0' && this.str_node_id.charAt(l)<='9'){
-    		dl = this.str_node_id.charAt(l) - '0'; 
-    	}else{
-    		dl = this.str_node_id.charAt(l) - 'a' + 10;
-    	}
-    	this.r_table[l][dl] = this;
     }
     
-    public void updateNeighbours(Node n){
+    public void updateNeighbourSet(Node n){
     	this.n_set.add(n);
     	for(int i=0;i<n.n_set.size();i++){
     		if(this.n_set.size()>=M){
@@ -229,8 +311,9 @@ public class Node implements Runnable{
     		greatest = this.node_id;
     	}else{
     		greatest = r_lset.lastElement().node_id;
-    	} 	
-        if(least >= msg.key && msg.key<= greatest){
+    	}
+    	System.out.println(this.node_id+ ": left neigh:"+least+" right_neigh:"+greatest);
+        if( this.greaterThanForKeys(msg.key,least)  && this.greaterThanForKeys(greatest,msg.key)){
             int where = 0;		//-1=left; 1=right
             long min_dist= dist_key(this.node_id, msg.key),tmp_dist;
             int min_idx=0;
@@ -253,18 +336,21 @@ public class Node implements Runnable{
             if(where == 0){
                 // msg for you now return the answer
                 // handleMsg();
-                System.out.println("Notification:- Node: "+str_node_id+" received a msg of type: "+msg.type +" from: "+msg.srcNode.str_node_id);
+                System.out.println("Notification1:- Node: "+str_node_id+" received a msg of type: "+msg.type +" from: "+msg.srcNode.node_id);
                 return true;
             }else if(where<0){
-                l_lset.get(min_idx).addMessage(msg);
+            	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.l_lset.get(min_idx).node_id);
+            	l_lset.get(min_idx).addMessage(msg);
             }else{
+            	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.r_lset.get(min_idx).node_id);
                 r_lset.get(min_idx).addMessage(msg);
             }
             return false;
         }
         // if not in leaf set now go to routing table
         int l = sharedPrefix(this.node_id,msg.key);
-        String key_str = Long.toString(msg.key);
+        System.out.println(this.node_id+": str_node_id:"+this.str_node_id+" msg_id:"+msg.str_key+" prefix:"+l);
+        String key_str = msg.str_key;
          char x = key_str.charAt(l);
          int dl=0;
          if(x>='0' && x<='9'){
@@ -273,10 +359,14 @@ public class Node implements Runnable{
         	 dl = x-'a'+10;
          }
          
-        if(r_table[l][dl] != null){
-            r_table[l][dl].addMessage(msg);    // entry found in routing table
-            return false;
-        }
+         if(this.r_table[l][dl]!=null && this.r_table[l][dl]==this){
+        	 return true;
+         }
+         if(r_table[l][dl] != null){
+        	 System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.r_table[l][dl].node_id);
+        	 r_table[l][dl].addMessage(msg);    // entry found in routing table
+        	 return false;
+         }
 
         //if not found in routing table or leaf set
         int where = -4;   //-1->neighbour, -2->left, -3->right; +ve->routing table; -4->self; -5->nothing
@@ -316,8 +406,8 @@ public class Node implements Runnable{
             }
         }
         for(int i=0;i<rows;i++){
-            for(int j=0;i<base;j++){
-                if(r_table[i][j]!=null){
+            for(int j=0;j<base;j++){
+                if(this.r_table[i][j]!=null){
                     int l1 = sharedPrefix(r_table[i][j].node_id,msg.key);
                     if(l1>=l){
                         dist = dist_key(r_table[i][j].node_id,msg.key);
@@ -331,22 +421,26 @@ public class Node implements Runnable{
             }
         }
         if(where==-1){
+        	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.n_set.get(min_idx).node_id);
             n_set.get(min_idx).addMessage(msg);
             return false;
         }else if(where ==-2){
+        	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.l_lset.get(min_idx).node_id);
             l_lset.get(min_idx).addMessage(msg);
-            if(l_lset.get(min_idx) == this){return true;}
+            if(l_lset.get(min_idx) == this){System.out.println("Panic::::::");return true;}
             return false;
         }else if(where==-3){
+        	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.r_lset.get(min_idx).node_id);
             r_lset.get(min_idx).addMessage(msg);
-            if(r_lset.get(min_idx) == this){return true;}
+            if(r_lset.get(min_idx) == this){System.out.println("Panic::::::");return true;}
             return false;
         }else if(where>0){
+        	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.r_table[min_idx/rows][min_idx%rows].node_id);
             r_table[min_idx/rows][min_idx%rows].addMessage(msg);
             return false;
         }else if(where==-4){
-        	 System.out.println("Notification:- Node: "+str_node_id+" received a msg of type: "+msg.type +" from: "+msg.srcNode.str_node_id);
-             return true;
+        	System.out.println("Notification2:- Node: "+str_node_id+" received a msg of type: "+msg.type +" from: "+msg.srcNode.node_id);
+            return true;
         }else{
             //should never reach here;
             System.out.println("Panic: Routing table incorrect at node: "+this.node_id);
