@@ -17,7 +17,7 @@ public class Node implements Runnable{
 	static int M=2;					//size of neighbourhood set
 	static int key_size = 16;		//in bits or logN;	hence 2^16 nodes To change also need to change convertbytestoInt
 	static long maxNodes = (long) Math.pow(2,key_size);
-	static int rows = (int) Math.ceil(key_size/b);
+	static int rows = (int) Math.ceil(key_size/Node.b);
 	
 	
 	//State information
@@ -314,12 +314,20 @@ public class Node implements Runnable{
     public int sharedPrefix(long a,long b){
         int len = 0;
         String x=Long.toString(a,base),y = Long.toString(b,base);
+//        System.out.println("key/b: "+key_size/Node.b);
+        while(x.length()<key_size/Node.b){
+        	x = '0'+x;
+        }
+        while(y.length()<key_size/Node.b){
+        	y = '0'+y;
+        }
         for(int i=0;i<x.length() && i<y.length();i++){
             if(x.charAt(i) != y.charAt(i)){
                 break;
             }
             len++;
         }
+//        System.out.println("x:"+x+"  y:"+y+"  l:"+len);
         return len;
     }
     
@@ -376,7 +384,7 @@ public class Node implements Runnable{
         // if not in leaf set now go to routing table
 	    int l = sharedPrefix(this.node_id,msg.key);
 	    System.out.println(this.node_id+": str_node_id:"+this.str_node_id+" msg_id:"+msg.str_key+" prefix:"+l);
-	    if(key_size/base <= l){return true;}
+	    if(key_size/Node.b <= l){return true;}
 	    String key_str = msg.str_key;
 	    char x = key_str.charAt(l);
 	    int dl=0;

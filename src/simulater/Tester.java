@@ -14,7 +14,7 @@ public class Tester {
 		n.printNodeState(n);
 				
 		int iter=2;
-		t.sleep(3000);
+		t.sleep(1000);
 		System.out.println("\n\n\n\n");
 		System.out.println("Nodes: 1");
 		Node n1 = new Node(38798);
@@ -26,10 +26,10 @@ public class Tester {
 //		t.sleep(500);
 		n.printNodeState(n1);
 		
-		t.sleep(3000);
+		t.sleep(1000);
 		System.out.println("\n\n\n\n");
 		System.out.println("Nodes: 2");
-		Node n2 = new Node(30001);
+		Node n2 = new Node(3330);
 		n2.known = n;
 		n2.public_addr = "3.72.93.2";
 		test.addNode(n2);
