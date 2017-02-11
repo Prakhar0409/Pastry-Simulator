@@ -100,27 +100,48 @@ public class Node implements Runnable{
 //    	System.out.println("Hey fron new node: "+ Thread.currentThread().getName());
     	this.start();		//Node join
     	System.out.println(this.node_id + ": Node initialized");
+    	Message m;
+    	boolean f;
     	while(true){
+    		if(this.self_delete){
+//    			deleteNode();
+    		}
     		Message msg = getNextMessage();
     		if(msg==null){
     			continue;
     		}
     		System.out.println(this.node_id +": Received message-> type:"+ msg.type+" src:"+msg.srcNode.node_id+" key:"+msg.key);
-    		msg.level+=1;
+    		msg.level+=1;							    		//increase hops
             switch (msg.type) {
                 case "join":
-                	boolean f = route(msg);
-                	Message m;
+                	f = route(msg);
                 	if(f){
                 		m = new Message("lastinfo",msg.level,this,msg.srcNode.node_id);		//send state info
                 	}else{
                 		m = new Message("info",msg.level,this,msg.srcNode.node_id);		//send state info
                 	}
-                    msg.srcNode.addMessage(m);					//send state info directly to x
-//                    msg.level += 1;
-                    
+                	
+                	//send message to node if it did not leave the network
+                    if(msg.srcNode != null){
+                    	msg.srcNode.addMessage(m);					//send state info directly to x
+                    }
                     break;
-                
+                case "lookup":
+                	f = route(msg);
+                	if(f){
+                		if(msg.srcNode == this){
+                        	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+". I had the key and so hops: "+(msg.level-1));
+                		}else{
+                			m = new Message("lookup_reply",msg.level,this,msg.key);		//type,hops,src,key_to_which_this_is_reply
+                			msg.srcNode.addMessage(m);
+                		}
+                	}else{
+                		//chill, you already forwarded it in route :-P
+                	}
+                	break;
+                case "lookup_reply":
+                	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+" from node:"+msg.srcNode.node_id+" in hops: "+(msg.level-1));
+                	break;
                 case "forward":
                     route(msg);
                     break;
@@ -180,6 +201,8 @@ public class Node implements Runnable{
             }
     	}
     }
+    
+    
     
     /*
      * Returns true if key->a > key->b

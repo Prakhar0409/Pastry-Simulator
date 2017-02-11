@@ -12,6 +12,7 @@ import java.util.Scanner;
 import java.util.Vector;
 
 import dht1.KeyGenerator;
+import dht1.Message;
 import dht1.Node;
 import dht1.Pair;
 
@@ -53,7 +54,7 @@ public class Simulater {
 						line = null;
 					}
 			     }
-			}else{	//otherwise randomly do something
+			}else{								//otherwise randomly do something
 				r = random.nextFloat();
 				//at #nodes = max/2 => frac1 = frac2-frac1 = 1/3;
 				frac1 = (float)(max_nodes-n_list.size())/(float)(3*max_nodes/2);
@@ -150,7 +151,9 @@ public class Simulater {
 		//selecting random node that wishes to lookup
 		Node tmp_node = n_list.get(random.nextInt(n_list.size()));
 		System.out.println("Simulator: Node: "+tmp_node.node_id+" "+tmp_node.public_addr.toString()+" looking up key: "+key);
-		tmp_node.lookup_key = key;
-		tmp_node.lookup = true;
+		Message m = new Message("lookup",0,tmp_node,key);
+		tmp_node.addMessage(m);
+//		tmp_node.lookup_key = key;
+//		tmp_node.lookup = true;
 	}
 }
