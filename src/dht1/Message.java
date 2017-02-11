@@ -8,7 +8,7 @@ public class Message {
 	
 	long key;
 	String str_key;
-	String type; 	//"join"->join request,"normal"->normal msg, "info"->join reply with state info;
+	String type; 	//"join"->join request,"lookup"->normal msg, "info"->join reply with state info;
 					//"lastinfo" -> last node sends info; "newnode_ll"->msg from a fully initialised new node which should be in my left leafset
 					//"newnode_rl"->msg from a fully initialised new node which should be in my right leafset
 					//"newnode_rt" -> msg from initialised new node that can be in routing table

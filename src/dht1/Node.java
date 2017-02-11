@@ -15,7 +15,7 @@ public class Node implements Runnable{
 	static int base=16;				// cal as - 2^b
 	static int L=2;					//size of leaf set	ideally 2*2^b since node added in leafsets
 	static int M=2;					//size of neighbourhood set
-	static int key_size = 16;		//in bits or logN;	hence 2^16 nodes To change also need to change convertbytestoInt
+	public static int key_size = 16;		//in bits or logN;	hence 2^16 nodes To change also need to change convertbytestoInt
 	static long maxNodes = (long) Math.pow(2,key_size);
 	static int rows = (int) Math.ceil(key_size/Node.b);
 	
@@ -30,14 +30,21 @@ public class Node implements Runnable{
 	Vector<Node> n_set = new Vector<Node>();			//neighbourhood set
 	Thread th;
 	public Node known;
+
+	//for deletion commands from simulator
+	public boolean self_delete = false;							//to simulate deletes
+
+	//for lookups from simulator
+	public boolean lookup = false;
+	public long lookup_key; 
 	
     private static Vector<Node> nodeList = new Vector<Node>();
     private MessageQueue<Message> msgQ= new MessageQueue<Message>(100);
     
     public Node(){
     	byte[] id;
-        id = generateRandomID(key_size/8);  //length in bytes
-        this.node_id = convertBytesToInt(id);
+        id = KeyGenerator.generateRandomID(key_size/8);  //length in bytes
+        this.node_id = KeyGenerator.convertBytesToInt(id);
 //        System.out.println("Node id is: "+node_id);
     }
 
@@ -530,22 +537,6 @@ public class Node implements Runnable{
     		System.out.println();
     	}
     	System.out.println("**********************************************************************");
-    }
-
-    private static byte[] generateRandomID(int length) {
-        Random random = new Random();
-        byte[] bytes = new byte[length];
-        for(int i=0; i<bytes.length; i++) {
-            bytes[i] = (byte) (random.nextInt() % 256);     //256 -> 2^8
-        }
-        return bytes;
-    }
-
-    private long convertBytesToInt(byte[] bytes) {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-        int result = buffer.getShort() & 0xffff; 		//only key size 16; bitmask for only +ve range        
-        return (long)result;
     }
 
     public Node getNode(int index) {
