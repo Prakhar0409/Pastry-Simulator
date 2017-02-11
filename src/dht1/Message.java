@@ -12,6 +12,7 @@ public class Message {
 					//"newnode_n" -> msg from initialised new node that can be in neighbouring set
 	
 	int hops;		//used in case of "info" and "join" msg; counts hops
+	String value;	//used in case of a lookup reply
 	
 	public Message(String type,Node src){
 		this.type = type;
@@ -41,6 +42,16 @@ public class Message {
 		this.key = -1;
 		this.str_key = this.srcNode.str_node_id;
 	}
+	
+	public Message(String type,int hops,Node src,long key,String val){
+		this.type = type;
+		this.hops = hops;
+		this.srcNode = src;
+		this.key = key;
+		this.str_key = Long.toString(key,Node.base);
+		this.value = val;
+	}
+	
 	
 	public Message(String type,int level,Node src,long key){
 		this.type = type;
