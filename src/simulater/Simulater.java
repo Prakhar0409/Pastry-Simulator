@@ -89,7 +89,7 @@ public class Simulater {
 		s.simulate();
 	}
 
-	/*
+	/**
 	 * 1. Generates a random public addr (a 2-tuple)
 	 * 2. Adds node to the network
 	 * */

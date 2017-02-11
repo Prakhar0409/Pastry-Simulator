@@ -1,94 +1,92 @@
 package dht1;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Random;
 import java.util.Vector;
 
-
 public class Node implements Runnable{
     /**
-     * Each node has its own message queue. Create thread for each node
+     * Implements a node of Pastry - a scalable, robust and resilient P2P protocol 
      */
-	//static global node info
-	static int b=4;					//base 2^b
-	static int base=16;				// cal as - 2^b
-	static int L=2;					//size of leaf set	ideally 2*2^b since node added in leafsets
-	static int M=2;					//size of neighbourhood set
-	public static int key_size = 16;		//in bits or logN;	hence 2^16 nodes To change also need to change convertbytestoInt
-	static long maxNodes = (long) Math.pow(2,key_size);
-	static int rows = (int) Math.ceil(key_size/Node.b);
-	public static int addr_range = 100;
+	//Configuration info for each Node in Pastry;
+	public static int b = 4;									//base of all keys is 2^b
+	public static int base = (int) Math.pow(2, b);				
+	public static int L = 2;									//size of leaf set
+	public static int M = 2;									//size of neighbourhood set
+	public static int key_size = 16;							//in bits;
+	public static long max_nodes = (long) Math.pow(2,key_size);	//maximum Nodes possible in network
+	public static int rows = (int) Math.ceil(key_size/Node.b);	//# of rows in routing table
+	public static int addr_range = 100;							//size of 2-D sq. array where each entry serves as public addr
 	
-	
-	//State information
-	public long node_id;		// Unique node id for each node
-    String str_node_id;
-	public Pair<Integer,Integer> public_addr = null;	//ip or  other public name also the thread name
-	Node[][] r_table = new Node[rows][base];		//routing table
-	Vector<Node> l_lset = new Vector<Node>();			//leaf set smaller- left leaf set has smaller ids
-	Vector<Node> r_lset = new Vector<Node>();			//leaf set bigger
-	Vector<Node> n_set = new Vector<Node>();			//neighbourhood set
-	Thread th;
-	public Node known;
+	// Node State, maintained at each node
+	public Pair<Integer,Integer> public_addr = null;		//public_id (ip) of the node
+	public long node_id;									// Unique node id for each node
+    public String str_node_id;								// node_id expressed in base `base` (2^b)	
+	public Node[][] r_table = new Node[rows][base];			//routing table
+	public Vector<Node> l_lset = new Vector<Node>();		//leaf set smaller - left leaf set has smaller ids
+	public Vector<Node> r_lset = new Vector<Node>();		//leaf set bigger - right leaf set has bigger ids
+	public Vector<Node> n_set = new Vector<Node>();			//neighbourhood set
+	public Thread th;										//thread running node logic
+	public Node known;										//initial node known to this node, null if this inits the network
 
 	//for deletion commands from simulator
-	public boolean self_delete = false;							//to simulate deletes
+	public boolean self_delete = false;						//to simulate deletes
 
-	//for lookups from simulator
+	//for lookups from simulator - unsed as for now. Used messaging system directly - todo
 	public boolean lookup = false;
 	public long lookup_key; 
 	
-    private static Vector<Node> nodeList = new Vector<Node>();
-    private MessageQueue<Message> msgQ= new MessageQueue<Message>(100);
+    private MessageQueue<Message> msgQ= new MessageQueue<Message>(100);		//to store msgs coming to a node
     
+    /*
+     * Constructor1 : when node_id not given 
+     * */
     public Node(){
     	byte[] id;
         id = KeyGenerator.generateRandomID(key_size/8);  //length in bytes
         this.node_id = KeyGenerator.convertBytesToInt(id);
-        if(public_addr == null){
+        if(this.public_addr == null){
         	Random random = new Random();
-        	public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
+        	this.public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
         }
-//        System.out.println("Node id is: "+node_id);
     }
 
+    /*
+     * Constructor2 : when node_id given 
+     * */
     public Node(long nodeid){
         this.node_id=nodeid;
-        if(public_addr == null){
+        if(this.public_addr == null){
         	Random random = new Random();
-        	public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
+        	this.public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
         }
     }
     
+    /*
+     * Initializing node before it starts to function
+     * Sets the current thread, str_node_id, self entries in routing table etc.
+     * */
     public void start(){
-    	th = Thread.currentThread();
-//    	public_addr = th.getName();
-//    	node_id = this.hashCode()%maxNodes;
-        str_node_id = Long.toString(node_id,base);
-        while(this.str_node_id.length()<4){
+    	this.th = Thread.currentThread();
+        this.str_node_id = Long.toString(this.node_id,Node.base);
+        while(this.str_node_id.length()<(key_size/b)){
         	this.str_node_id = '0'+this.str_node_id;
         }
-        System.out.println("Node id: "+ node_id+" str: "+this.str_node_id+"  rows:"+rows);
-//        System.out.println("Node id in base: "+ base + " : "+str_node_id);
-//    	node_id = public_addr.hashCode()%maxNodes;
-//        this.l_lset.add(this);
-//        this.r_lset.add(this);
-        for(int i=0;i<rows;i++){
-        	for(int j=0;j<base;j++){
-        		int col = 0;
-        		if(this.str_node_id.charAt(i)>='0' && this.str_node_id.charAt(i)<='9'){
-        			col = this.str_node_id.charAt(i) - '0';
-        		}else{
-        			col = this.str_node_id.charAt(i) - 'a'+10;
-        		}
-        		r_table[i][col] = this;
-        	}
+        System.out.println("Starting Node : "+ this.node_id+" ("+this.str_node_id+")");
+        for(int i=0;i<Node.rows;i++){
+    		int col = 0;
+    		if(this.str_node_id.charAt(i)>='0' && this.str_node_id.charAt(i)<='9'){
+    			col = this.str_node_id.charAt(i) - '0';
+    		}else{
+    			col = this.str_node_id.charAt(i) - 'a'+10;
+    		}
+    		this.r_table[i][col] = this;
         }
+
+        // if not the 1st Node to join the network
         if(known!=null){
-        	Message m = new Message("join",this);
-        	known.addMessage(m);					//X sent a join message to A
-        	updateNeighbourSet(known);
+        	Message m = new Message("join",0,this);		// key doesn't matter Message(type,hops,srcNode);
+        	this.known.addMessage(m);						//X sent a join message to A (X,A as referenced in paper)
+        	this.updateNeighbourSet(known);
         }
     }
 
@@ -112,14 +110,14 @@ public class Node implements Runnable{
     			continue;
     		}
     		System.out.println(this.node_id +": Received message-> type:"+ msg.type+" src:"+msg.srcNode.node_id+" key:"+msg.key);
-    		msg.level+=1;							    		//increase hops
+    		msg.hops+=1;							    		//increase hops
             switch (msg.type) {
                 case "join":
                 	f = route(msg);
                 	if(f){
-                		m = new Message("lastinfo",msg.level,this,msg.srcNode.node_id);		//send state info
+                		m = new Message("lastinfo",msg.hops,this,msg.srcNode.node_id);		//send state info
                 	}else{
-                		m = new Message("info",msg.level,this,msg.srcNode.node_id);		//send state info
+                		m = new Message("info",msg.hops,this,msg.srcNode.node_id);		//send state info
                 	}
                 	
                 	//send message to node if it did not leave the network
@@ -131,9 +129,9 @@ public class Node implements Runnable{
                 	f = route(msg);
                 	if(f){
                 		if(msg.srcNode == this){
-                        	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+". I had the key and so hops: "+(msg.level-1));
+                        	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+". I had the key and so hops: "+(msg.hops-1));
                 		}else{
-                			m = new Message("lookup_reply",msg.level,this,msg.key);		//type,hops,src,key_to_which_this_is_reply
+                			m = new Message("lookup_reply",msg.hops,this,msg.key);		//type,hops,src,key_to_which_this_is_reply
                 			msg.srcNode.addMessage(m);
                 		}
                 	}else{
@@ -141,7 +139,7 @@ public class Node implements Runnable{
                 	}
                 	break;
                 case "lookup_reply":
-                	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+" from node:"+msg.srcNode.node_id+" in hops: "+(msg.level-1));
+                	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+" from node:"+msg.srcNode.node_id+" in hops: "+(msg.hops-1));
                 	break;
                 case "delete":
                 	deleteNodeFromState(msg);
@@ -265,9 +263,9 @@ public class Node implements Runnable{
      * */
     public boolean greaterThanForKeys(long a,long b){
     	long tmp1 = a-b;
-    	if(tmp1<0){tmp1 += maxNodes;}
+    	if(tmp1<0){tmp1 += Node.max_nodes;}
     	long tmp2 = b-a;
-    	if(tmp2<0){tmp2 += maxNodes;}
+    	if(tmp2<0){tmp2 += Node.max_nodes;}
     	if(tmp1<tmp2){return true;}		//a is bigger than b draw a circle with 8 nodes and check:P
     	return false;
     }
@@ -363,8 +361,10 @@ public class Node implements Runnable{
     }
 
     public double dist_phy(Node a,Node b){
-    	// todo
-    	return 0;
+    	//Manhattan distance
+    	double d = Math.abs(a.public_addr.getLeft() - b.public_addr.getLeft());
+    	d += Math.abs(a.public_addr.getRight() - b.public_addr.getRight());
+    	return d;
     }
     
     public void updateTables(Node n){
@@ -393,14 +393,42 @@ public class Node implements Runnable{
     	}
     }
     
+    /**
+     * Node 'n' is close to the current node. Use this to update my neigbourSet
+     * NeigbourSet is arranged in the order of distances
+     * */
     public void updateNeighbourSet(Node n){
-    	this.n_set.add(n);
-    	for(int i=0;i<n.n_set.size();i++){
-    		if(this.n_set.size()>=M){
-    			break;
+//    	this.n_set.add(n);
+//    	for(int i=0;i<n.n_set.size();i++){
+//    		if(this.n_set.size()>=M){
+//    			break;
+//    		}
+//			this.n_set.add(n.n_set.get(i));
+//    	}
+    	if(!this.n_set.contains(n)){
+    		double dist = dist_phy(this,n);
+    		int i=0;
+    		for(;i<this.n_set.size();i++){
+    			if(dist < dist_phy(this,this.n_set.get(i))){
+    				break;
+    			}
     		}
-			this.n_set.add(n.n_set.get(i));
+    		this.n_set.add(i,n);
     	}
+    	for(int i=0;i<n.n_set.size();i++){
+    		double dist = dist_phy(this,n.n_set.get(i));
+    		int j=0;
+    		for(;j<this.n_set.size();j++){
+    			if(this.n_set.get(j)!=null && dist < dist_phy(this,this.n_set.get(j))){
+    				break;
+    			}
+    		}
+    		this.n_set.add(j,n.n_set.get(i));
+    	}
+    	while(this.n_set.size()>M){
+    		this.n_set.remove(this.n_set.size()-1);
+		}
+    	return;
     }
     
     public long dist_key(long x,long y){
@@ -589,7 +617,7 @@ public class Node implements Runnable{
     
     public void printNodeState(Node n){
     	System.out.println("######################################################################");
-    	System.out.println("Node id: "+n.node_id+" ("+n.str_node_id+")");
+    	System.out.println("Node id: "+n.node_id+" ("+n.str_node_id+")"+" - public_addr:"+n.public_addr.toString());
     	System.out.println("Leaf Set");
     	for(int i=0;i<n.l_lset.size();i++){
     		if(n.l_lset.get(i)!=null){
@@ -636,14 +664,6 @@ public class Node implements Runnable{
     		System.out.println();
     	}
     	System.out.println("**********************************************************************");
-    }
-
-    public Node getNode(int index) {
-        return nodeList.get(index);
-    }
-
-    public int getNodeListLength(){
-        return nodeList.size();
     }
    
     public void addMessage(Message msg) {

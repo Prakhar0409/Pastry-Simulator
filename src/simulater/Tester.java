@@ -13,28 +13,38 @@ public class Tester {
 		Vector<Node> nList = new Vector<Node>();
 		Node n = new Node(3329);
 		test.init(n);
-		t.sleep(500);
-		n.printNodeState(n);
+//		t.sleep(500);
+//		n.printNodeState(n);
 				
 		int iter=2;
-		t.sleep(1000);
-		System.out.println("\n\n\n\n");
-		System.out.println("Nodes: 1");
+//		t.sleep(1000);
+//		System.out.println("\n\n\n\n");
+//		System.out.println("Nodes: 1");
 		Node n1 = new Node(38798);
+		Node n2 = new Node(38799);
 		n1.known = n;
+		n2.known = n;
 //		n1.public_addr = "10.208.1.99";
 		test.addNode(n1);
-		t.sleep(500);
+		test.addNode(n2);
+//		t.sleep(500);
 		n.printNodeState(n);
 //		t.sleep(500);
 		n.printNodeState(n1);
+		n.printNodeState(n2);
 		
 		t.sleep(1000);
-		n1.self_delete = true;
-		n1 = new Node();
-		t.sleep(1000);
-		System.out.println("Deleted");
 		n.printNodeState(n);
+//		t.sleep(500);
+		n.printNodeState(n1);
+		n.printNodeState(n2);
+		
+//		t.sleep(1000);
+//		n1.self_delete = true;
+//		n1 = new Node();
+//		t.sleep(1000);
+//		System.out.println("Deleted");
+//		n.printNodeState(n);
 		
 //		t.sleep(1000);
 //		System.out.println("\n\n\n\n");
