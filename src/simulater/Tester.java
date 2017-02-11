@@ -30,16 +30,23 @@ public class Tester {
 		n.printNodeState(n1);
 		
 		t.sleep(1000);
-		System.out.println("\n\n\n\n");
-		System.out.println("Nodes: 2");
-		Node n2 = new Node(3330);
-		n2.known = n;
-//		n2.public_addr = "3.72.93.2";
-		test.addNode(n2);
-		t.sleep(500);
+		n1.self_delete = true;
+		n1 = new Node();
+		t.sleep(1000);
+		System.out.println("Deleted");
 		n.printNodeState(n);
-		n.printNodeState(n1);
-		n.printNodeState(n2);
+		
+//		t.sleep(1000);
+//		System.out.println("\n\n\n\n");
+//		System.out.println("Nodes: 2");
+//		Node n2 = new Node(3330);
+//		n2.known = n;
+////		n2.public_addr = "3.72.93.2";
+//		test.addNode(n2);
+//		t.sleep(500);
+//		n.printNodeState(n);
+//		n.printNodeState(n1);
+//		n.printNodeState(n2);
 		while(true);
 	}
 	

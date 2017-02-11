@@ -128,9 +128,11 @@ public class Simulater {
 			return;
 		}
 		Random random = new Random();
-		Node tmp_node = n_list.get(random.nextInt(n_list.size()));
+		int idx = random.nextInt(n_list.size());
+		Node tmp_node = n_list.get(idx);
 		System.out.println("Simulater: Deleting node: "+tmp_node.node_id+" "+tmp_node.public_addr.toString());
 		tmp_node.self_delete = true;
+		n_list.remove(idx);
 	}
 	
 	/*

@@ -104,7 +104,8 @@ public class Node implements Runnable{
     	boolean f;
     	while(true){
     		if(this.self_delete){
-//    			deleteNode();
+    			deleteNode();
+    			return;
     		}
     		Message msg = getNextMessage();
     		if(msg==null){
@@ -141,6 +142,9 @@ public class Node implements Runnable{
                 	break;
                 case "lookup_reply":
                 	System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+" from node:"+msg.srcNode.node_id+" in hops: "+(msg.level-1));
+                	break;
+                case "delete":
+                	deleteNodeFromState(msg);
                 	break;
                 case "forward":
                     route(msg);
@@ -202,6 +206,58 @@ public class Node implements Runnable{
     	}
     }
     
+    public void deleteNodeFromState(Message msg){
+    	for(int i=0;i<this.n_set.size();i++){
+    		if(this.n_set.get(i)!=null && this.n_set.get(i).node_id == msg.srcNode.node_id){
+    			this.n_set.remove(i);
+    		}
+    	}
+    	for(int i=0;i<this.l_lset.size();i++){
+    		if(this.l_lset.get(i)!=null && this.l_lset.get(i).node_id == msg.srcNode.node_id){
+    			this.l_lset.remove(i);
+    		}
+    	}
+    	for(int i=0;i<this.r_lset.size();i++){
+    		if(this.r_lset.get(i)!=null && this.r_lset.get(i).node_id == msg.srcNode.node_id){
+    			this.r_lset.remove(i);
+    		}
+    	}
+    	for(int i=0;i<rows;i++){
+    		for(int j=0;j<base;j++){
+    			if(this.r_table[i][j]!=null && this.r_table[i][j].node_id == msg.srcNode.node_id){
+        			this.r_table[i][j] = null;
+        		}
+    		}
+    	}
+    	return;
+    }
+    
+    public void deleteNode(){
+    	Message msg = new Message("delete",0,this,this.node_id);	//msg key doesn't matter since you will directly send it to whoever knows you
+    	for(int i=0;i<this.n_set.size();i++){
+    		if(this.n_set.get(i)!=null){
+    			this.n_set.get(i).addMessage(msg);
+    		}
+    	}
+    	for(int i=0;i<this.l_lset.size();i++){
+    		if(this.l_lset.get(i)!=null){
+    			this.l_lset.get(i).addMessage(msg);
+    		}
+    	}
+    	for(int i=0;i<this.r_lset.size();i++){
+    		if(this.r_lset.get(i)!=null){
+    			this.r_lset.get(i).addMessage(msg);
+    		}
+    	}
+    	for(int i=0;i<rows;i++){
+    		for(int j=0;j<base;j++){
+    			if(this.r_table[i][j] != null){
+    				this.r_table[i][j].addMessage(msg);
+    			}
+    		}
+    	}
+    	return;
+    }
     
     
     /*
