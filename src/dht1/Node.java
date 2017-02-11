@@ -18,12 +18,13 @@ public class Node implements Runnable{
 	public static int key_size = 16;		//in bits or logN;	hence 2^16 nodes To change also need to change convertbytestoInt
 	static long maxNodes = (long) Math.pow(2,key_size);
 	static int rows = (int) Math.ceil(key_size/Node.b);
+	public static int addr_range = 100;
 	
 	
 	//State information
 	public long node_id;		// Unique node id for each node
     String str_node_id;
-	public Pair<Integer,Integer> public_addr;	//ip or  other public name also the thread name
+	public Pair<Integer,Integer> public_addr = null;	//ip or  other public name also the thread name
 	Node[][] r_table = new Node[rows][base];		//routing table
 	Vector<Node> l_lset = new Vector<Node>();			//leaf set smaller- left leaf set has smaller ids
 	Vector<Node> r_lset = new Vector<Node>();			//leaf set bigger
@@ -45,11 +46,19 @@ public class Node implements Runnable{
     	byte[] id;
         id = KeyGenerator.generateRandomID(key_size/8);  //length in bytes
         this.node_id = KeyGenerator.convertBytesToInt(id);
+        if(public_addr == null){
+        	Random random = new Random();
+        	public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
+        }
 //        System.out.println("Node id is: "+node_id);
     }
 
     public Node(long nodeid){
         this.node_id=nodeid;
+        if(public_addr == null){
+        	Random random = new Random();
+        	public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
+        }
     }
     
     public void start(){
@@ -111,6 +120,7 @@ public class Node implements Runnable{
 //                    msg.level += 1;
                     
                     break;
+                
                 case "forward":
                     route(msg);
                     break;
@@ -477,9 +487,16 @@ public class Node implements Runnable{
             if(r_lset.get(min_idx) == this){System.out.println("Panic::::::");return true;}
             return false;
         }else if(where>0){
-        	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.r_table[min_idx/rows][min_idx%rows].node_id);
-            r_table[min_idx/rows][min_idx%rows].addMessage(msg);
-            return false;
+        	if(this.r_table[min_idx/base][min_idx%base] != null){
+        		System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.r_table[min_idx/base][min_idx%base].node_id);
+        		r_table[min_idx/base][min_idx%base].addMessage(msg);
+        		return false;
+        	}else{
+        		//that node suddenly left
+        		//add message for self to recheck
+        		this.addMessage(msg);
+        		return false;
+        	}
         }else if(where==-4){
         	System.out.println("Notification2:- Node: "+str_node_id+" received a msg of type: "+msg.type +" from: "+msg.srcNode.node_id);
             return true;
@@ -497,7 +514,8 @@ public class Node implements Runnable{
     	System.out.println("Leaf Set");
     	for(int i=0;i<n.l_lset.size();i++){
     		if(n.l_lset.get(i)!=null){
-    			System.out.print(n.l_lset.get(i).node_id+" ("+n.l_lset.get(i).str_node_id+"), ");
+    			System.out.print(n.l_lset.get(i).node_id+", ");
+//    			System.out.print(n.l_lset.get(i).node_id+" ("+n.l_lset.get(i).str_node_id+"), ");
     		}else{
     			System.out.print("null, ");
     		}
@@ -505,7 +523,8 @@ public class Node implements Runnable{
     	System.out.print(" || ");
     	for(int i=0;i<n.r_lset.size();i++){
     		if(n.r_lset.get(i)!=null){
-    			System.out.print(n.r_lset.get(i).node_id+" ("+n.r_lset.get(i).str_node_id+"), ");
+    			System.out.print(n.r_lset.get(i).node_id+", ");
+//    			System.out.print(n.r_lset.get(i).node_id+" ("+n.r_lset.get(i).str_node_id+"), ");
     		}else{
     			System.out.print("null, ");
     		}
@@ -515,7 +534,8 @@ public class Node implements Runnable{
     	System.out.println("Neigbourhood Set");
     	for(int i=0;i<n.n_set.size();i++){
     		if(n.n_set.get(i)!=null){
-    			System.out.print(n.n_set.get(i).node_id+" ("+n.n_set.get(i).str_node_id+"), ");
+    			System.out.print(n.n_set.get(i).node_id+", ");
+//    			System.out.print(n.n_set.get(i).node_id+" ("+n.n_set.get(i).str_node_id+"), ");
     		}else{
     			System.out.print("null, ");
     		}
@@ -529,9 +549,9 @@ public class Node implements Runnable{
     	for(int i=0;i<rows;i++){
     		for(int j=0;j<base;j++){
     			if(n.r_table[i][j]!=null){
-    				System.out.print(n.r_table[i][j].node_id+" ("+n.r_table[i][j].str_node_id+"), \t");
+    				System.out.print(n.r_table[i][j].node_id+", \t");
     			}else{
-        			System.out.print("null value, \t");
+        			System.out.print("null, \t");
         		}
     		}
     		System.out.println();

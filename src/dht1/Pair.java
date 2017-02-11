@@ -31,7 +31,6 @@ public class Pair<L,R> {
 	  
 	  @Override
 	  public String toString(){
-		  System.out.println("this is called");
 		  String s="(";
 		  s += this.getLeft().toString();
 		  s+=",";

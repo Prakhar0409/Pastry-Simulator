@@ -17,7 +17,6 @@ import dht1.Pair;
 
 public class Simulater {
 	Vector <Node> n_list = new Vector<Node>();
-	int addr_range = 100;			//public addr 2-D sq. array dimensions
 	boolean override = false;		//to decide and override the commands
 	int max_nodes=16;				//max allowed nodes in the network
 	int min_nodes=2;				//min nodes in the network to prevent deleting
@@ -62,6 +61,11 @@ public class Simulater {
 				if(r<frac1){
 					//add a new node
 					addNode();
+					curr_thread.sleep(500);
+					for(int i=0;i<n_list.size();i++){
+						if(n_list.get(i) == null){continue;}
+						n_list.get(i).printNodeState(n_list.get(i));
+					}
 				}else if(r<frac2){
 					//delete a node
 					deleteNode();
@@ -94,7 +98,7 @@ public class Simulater {
 			return;
 		}
 		Random random = new Random();
-		Pair<Integer,Integer> public_addr = new Pair<Integer,Integer>(random.nextInt(addr_range+1),random.nextInt(addr_range+1));;
+		Pair<Integer,Integer> public_addr = new Pair<Integer,Integer>(random.nextInt(Node.addr_range+1),random.nextInt(Node.addr_range+1));
 		Node tmp_node = new Node();
 		
 		//set node public ip addr; set a known node. 
