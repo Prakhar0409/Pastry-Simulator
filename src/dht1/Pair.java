@@ -29,11 +29,13 @@ public class Pair<L,R> {
 	           this.right.equals(pairo.getRight());
 	  }
 	  
-	  public String toString(Pair<L,R> p){
+	  @Override
+	  public String toString(){
+		  System.out.println("this is called");
 		  String s="(";
-		  s = p.getLeft().toString();
+		  s += this.getLeft().toString();
 		  s+=",";
-		  s += p.getRight().toString();
+		  s += this.getRight().toString();
 		  s+=")";
 		  return s;
 	  }

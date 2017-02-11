@@ -21,7 +21,7 @@ public class Node implements Runnable{
 	
 	
 	//State information
-	long node_id;		// Unique node id for each node
+	public long node_id;		// Unique node id for each node
     String str_node_id;
 	public Pair<Integer,Integer> public_addr;	//ip or  other public name also the thread name
 	Node[][] r_table = new Node[rows][base];		//routing table

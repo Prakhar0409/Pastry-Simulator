@@ -3,6 +3,10 @@ package simulater;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.Charset;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Vector;
@@ -19,42 +23,38 @@ public class Simulater {
 	int min_nodes=2;				//min nodes in the network to prevent deleting
 	boolean auto=false;				// todo  add functions like auto csimulate vs user input
 	
-	public void simulate(){
-		Thread t = Thread.currentThread();
+	public void simulate() throws Exception{
+		Thread curr_thread = Thread.currentThread();
 		Random random = new Random();
 		float r,frac1,frac2;
-//		Scanner input = new Scanner(System.in);
-		BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
-		String s = null,line;
-		int tp;
+
+		String line=null;
+		byte[] inp_bytes = new byte[2048];
+		int num_bytes;
+		
 		while (true){
-//			System.in.read;
-			// handling if user wants something
-			System.out.println("yo man");
-//			s = input.nextLine();
-			try {
-				while(true){
-					if((tp = br.read()) != -1 ){
-						System.out.println("typed: "+tp);
+			curr_thread.sleep(1000);
+			if(System.in.available()>0){
+				num_bytes = System.in.read(inp_bytes, 0, 1024);
+				if (num_bytes < 0){
+					System.out.println("Simulator: Panic input reading. Numbytes: "+num_bytes);
+				}else{
+					if(line==null){
+						line = new String(inp_bytes, 0, num_bytes);
 					}else{
-						System.out.println("food");
+						line += new String(inp_bytes, 0, num_bytes);
 					}
-					System.out.println("food");
-				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			if( !s.equals("\\n") ){
-				System.out.println("Simulater: User entered: "+s);
-				if("end".equals(s)){
-					System.out.println("Simulater: Ending Simulations");
-//					input.close();
-					break;
-				}
+					if (line != null && line.length() > 0 && line.charAt(line.length()-1)=='\n') {
+						line = line.substring(0, line.length()-1);
+						System.out.println("Simulator: User entered: "+line);
+						if("end".equals(line)){
+				    		System.out.println("Simulator: Ending Simulations");
+				    		System.exit(0);
+				    	}
+						line = null;
+					}
+			     }
 			}else{	//otherwise randomly do something
-				System.out.println("heere");
 				r = random.nextFloat();
 				//at #nodes = max/2 => frac1 = frac2-frac1 = 1/3;
 				frac1 = (float)(max_nodes-n_list.size())/(float)(3*max_nodes/2);
@@ -106,7 +106,7 @@ public class Simulater {
 			//set a random known node
 			tmp_node.known = n_list.get(random.nextInt(n_list.size()));
 		}
-		System.out.println("Simulater: Adding a node : "+public_addr.toString());
+		System.out.println("Simulater: Adding a node : "+tmp_node.node_id+" "+public_addr.toString());
 		n_list.add(tmp_node);
 		Thread t = new Thread(tmp_node,public_addr.toString());
 		t.start();
@@ -124,7 +124,7 @@ public class Simulater {
 		}
 		Random random = new Random();
 		Node tmp_node = n_list.get(random.nextInt(n_list.size()));
-		System.out.println("Simulater: Deleting node: "+tmp_node.public_addr.toString());
+		System.out.println("Simulater: Deleting node: "+tmp_node.node_id+" "+tmp_node.public_addr.toString());
 		tmp_node.self_delete = true;
 	}
 	
@@ -145,7 +145,7 @@ public class Simulater {
 		
 		//selecting random node that wishes to lookup
 		Node tmp_node = n_list.get(random.nextInt(n_list.size()));
-		System.out.println("Simulator: Node: "+tmp_node.public_addr.toString()+" looking up key: "+key);
+		System.out.println("Simulator: Node: "+tmp_node.node_id+" "+tmp_node.public_addr.toString()+" looking up key: "+key);
 		tmp_node.lookup_key = key;
 		tmp_node.lookup = true;
 	}
