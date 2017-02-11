@@ -1,5 +1,7 @@
 package simulater;
 
+import java.util.Vector;
+
 import dht1.*;
 
 public class Tester {
@@ -8,6 +10,7 @@ public class Tester {
 		Tester test = new Tester();
 		Thread t = Thread.currentThread();
 		
+		Vector<Node> nList = new Vector<Node>();
 		Node n = new Node(3329);
 		test.init(n);
 		t.sleep(500);
@@ -19,7 +22,7 @@ public class Tester {
 		System.out.println("Nodes: 1");
 		Node n1 = new Node(38798);
 		n1.known = n;
-		n1.public_addr = "10.208.1.99";
+//		n1.public_addr = "10.208.1.99";
 		test.addNode(n1);
 		t.sleep(500);
 		n.printNodeState(n);
@@ -31,7 +34,7 @@ public class Tester {
 		System.out.println("Nodes: 2");
 		Node n2 = new Node(3330);
 		n2.known = n;
-		n2.public_addr = "3.72.93.2";
+//		n2.public_addr = "3.72.93.2";
 		test.addNode(n2);
 		t.sleep(500);
 		n.printNodeState(n);
@@ -41,7 +44,7 @@ public class Tester {
 	}
 	
 	public void addNode(Node n){
-		Thread t = new Thread(n,n.public_addr);
+		Thread t = new Thread(n);
 		t.start();
 	}
 	

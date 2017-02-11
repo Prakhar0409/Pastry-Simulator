@@ -23,7 +23,7 @@ public class Node implements Runnable{
 	//State information
 	long node_id;		// Unique node id for each node
     String str_node_id;
-	public String public_addr;	//ip or  other public name also the thread name
+	public Pair<Integer,Integer> public_addr;	//ip or  other public name also the thread name
 	Node[][] r_table = new Node[rows][base];		//routing table
 	Vector<Node> l_lset = new Vector<Node>();			//leaf set smaller- left leaf set has smaller ids
 	Vector<Node> r_lset = new Vector<Node>();			//leaf set bigger
@@ -47,7 +47,7 @@ public class Node implements Runnable{
     
     public void start(){
     	th = Thread.currentThread();
-    	public_addr = th.getName();
+//    	public_addr = th.getName();
 //    	node_id = this.hashCode()%maxNodes;
         str_node_id = Long.toString(node_id,base);
         while(this.str_node_id.length()<4){
