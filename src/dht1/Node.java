@@ -249,12 +249,12 @@ public class Node implements Runnable{
                 	this.updateLeafSet(msg.srcNode);
                 	break;
                 case "newnode_ll":
-                	this.updateLeafFromNewNode(msg.srcNode,msg);
+                	this.updateLeafFromNewNode(msg.srcNode,msg,'l');
                 	this.updateTables(msg.srcNode);
                 	this.updateNeighbourSet(msg.srcNode);
                 	break;
                 case "newnode_rl":
-                	this.updateLeafFromNewNode(msg.srcNode,msg);
+                	this.updateLeafFromNewNode(msg.srcNode,msg,'r');
                 	this.updateTables(msg.srcNode);
                 	this.updateNeighbourSet(msg.srcNode);
                 	break;
@@ -293,17 +293,33 @@ public class Node implements Runnable{
     	return this.greaterThanForKeys(b, a);
     }
     
+    /***
+     * Returns anticlock dist to id fromthis.node_id
+     * */
+    public long anticlockDist(long id){
+    	long d = id - this.node_id;			//b-a;
+    	if(d<0){d = -d;}
+    	else{ d = Node.max_nodes-d;}
+    	return d;
+    }
+    
+    /***
+     * Returns clock dist to id from this.node_id
+     * */
+    public long clockDist(long id){
+    	long d = id - this.node_id;			//b-a;
+    	if(d<0){d+=Node.max_nodes;}
+    	return d;
+    }
+    
     /**
      * Update the leaf sets of nodes that received a msg from the newly added node
      * */
-    public void updateLeafFromNewNode(Node n,Message m){
-    	if(this.l_lset.contains(n) || this.r_lset.contains(n)){
-    		return;
-    	}
-    	if(this.greaterThanForKeys(this.node_id,n.node_id)){	//if my.id > n.id then add n to lesser leaf set
-    		//update to left leaf set
+    public void updateLeafFromNewNode(Node n,Message m,char direction){
+    	if(direction == 'l'){
+    		if(this.l_lset.contains(n)){return;}
     		int i=0;
-    		while(i<this.l_lset.size() && this.greaterThanForKeys(this.l_lset.get(i).node_id,n.node_id)){
+    		while(i<this.l_lset.size() && this.anticlockDist(n.node_id)>this.anticlockDist(this.l_lset.get(i).node_id) ){
     			i++;
     		}
     		this.l_lset.add(i,n);
@@ -311,16 +327,42 @@ public class Node implements Runnable{
     			this.l_lset.remove(this.l_lset.size()-1);
     		}
     	}else{
-    		//update to right leaf set
+    		if(this.r_lset.contains(n)){return;}
     		int i=0;
-    		while(i<this.r_lset.size() && this.smallerThanForKeys(this.r_lset.get(i).node_id,n.node_id)){
+    		while(i<this.r_lset.size() && this.clockDist(n.node_id)>this.clockDist(this.r_lset.get(i).node_id) ){
+    			//System.out.println(this.node_id+": clockDist to"+i);
     			i++;
-    		}    		
-    		this.r_lset.add(i,n);    		
+    		}
+    		//System.out.println("i: "+i);
+    		this.r_lset.add(i,n);
     		while(this.r_lset.size()>L/2){
     			this.r_lset.remove(this.r_lset.size()-1);
     		}
     	}
+//    	if(this.l_lset.contains(n) || this.r_lset.contains(n)){
+//    		return;
+//    	}
+//    	if(this.greaterThanForKeys(this.node_id,n.node_id)){	//if my.id > n.id then add n to lesser leaf set
+//    		//update to left leaf set
+//    		int i=0;
+//    		while(i<this.l_lset.size() && this.greaterThanForKeys(this.l_lset.get(i).node_id,n.node_id)){
+//    			i++;
+//    		}
+//    		this.l_lset.add(i,n);
+//    		while(this.l_lset.size()>L/2){
+//    			this.l_lset.remove(this.l_lset.size()-1);
+//    		}
+//    	}else{
+//    		//update to right leaf set
+//    		int i=0;
+//    		while(i<this.r_lset.size() && this.smallerThanForKeys(this.r_lset.get(i).node_id,n.node_id)){
+//    			i++;
+//    		}    		
+//    		this.r_lset.add(i,n);    		
+//    		while(this.r_lset.size()>L/2){
+//    			this.r_lset.remove(this.r_lset.size()-1);
+//    		}
+//    	}
     	
     	//this cases is required only while starting network on the first node
     	if(this.l_lset.isEmpty()){
@@ -346,15 +388,38 @@ public class Node implements Runnable{
 				break;
 			}
 			this.l_lset.add(n.l_lset.get(i));	//update X left leaf set
-			System.out.println(this.node_id+": Added to left leaf set, node: "+n.node_id);
+			System.out.println(this.node_id+": Added to left leaf set, node: "+n.l_lset.get(i).node_id);
+		}
+		if(this.l_lset.size()<L/2){
+			if(!this.l_lset.contains(n)){this.l_lset.add(n);}
+			for(int i=n.r_lset.size()-1;i>=0;i--){
+				if(this.l_lset.size()>=L/2 || this.l_lset.contains(n.r_lset.get(i))){
+					break;
+				}
+				this.l_lset.add(n.r_lset.get(i));	//update X left leaf set
+				System.out.println(this.node_id+": Added to left leaf set, node: "+n.r_lset.get(i).node_id);
+			}
 		}
 		for(int i=0;i<n.r_lset.size();i++){
 			if(this.r_lset.size()>=L/2){
 				break;
 			}
 			this.r_lset.add(n.r_lset.get(i));	//update X right leaf set
-			System.out.println(this.node_id+": Added to right leaf set, node: "+n.node_id);
+			System.out.println(this.node_id+": Added to right leaf set, node: "+n.r_lset.get(i).node_id);
 		}
+		if(this.r_lset.size()<L/2){
+			if(!this.r_lset.contains(n)){this.r_lset.add(n);}
+			for(int i=n.l_lset.size()-1;i>=0;i--){
+				if(this.r_lset.size()>=L/2 || this.r_lset.contains(n.l_lset.get(i))){
+					break;
+				}
+				this.r_lset.add(n.l_lset.get(i));	//update X left leaf set
+				System.out.println(this.node_id+": Added to right leaf set, node: "+n.l_lset.get(i).node_id);
+			}
+		}
+		
+		// todo check
+		//used only while adding the second node in the network
 		if(this.l_lset.isEmpty()){
 			this.l_lset.add(n);
 		}
@@ -433,10 +498,17 @@ public class Node implements Runnable{
     }
     
     /**
-     * returns distance between two keys on the circle
+     * returns distance between two keys on the circle - from the shorter side
      * */
     public long dist_key(long x,long y){
-    	return (x>y)?x-y:y-x;
+    	long d1,d2;
+    	if(x>y){
+    		d1 = x-y;
+    	}else{
+    		d1 = y-x;
+    	}
+    	d2 = Node.max_nodes - d1;
+    	return (d1>d2)? d2:d1;
     }
     
     /**
@@ -545,7 +617,7 @@ public class Node implements Runnable{
         // if not in leaf set now go to routing table
 	    int l = sharedPrefix(this.node_id,msg.key);
 	    System.out.println(this.node_id+": str_node_id:"+this.str_node_id+" msg_id:"+msg.key+" ("+msg.str_key+") sharedPrefix:"+l);
-	    if(key_size/Node.b <= l){return true;}
+	    if(Node.key_size/Node.b <= l){return true;}
 	    String key_str = msg.str_key;
 	    char x = key_str.charAt(l);
 	    int dl=0;

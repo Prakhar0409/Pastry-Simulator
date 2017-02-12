@@ -22,8 +22,6 @@ public class Tester {
 //		System.out.println("\n\n\n\n");
 //		System.out.println("Nodes: 1");
 		Node n1 = new Node(38798);
-		
-		
 		n1.known = n;
 		
 //		n1.public_addr = "10.208.1.99";

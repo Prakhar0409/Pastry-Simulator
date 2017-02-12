@@ -33,9 +33,17 @@ public class Message {
 		this.hops = hops;
 		this.srcNode = src;
 		this.key = key;
-		this.str_key = Long.toString(key,Node.base);
+		this.str_key = correctSize(Long.toString(key,Node.base));
 		this.value = val;
 	}
+	
+	public String correctSize(String a){
+		while(a.length()<Node.key_size/Node.b){
+			a = "0"+a;
+		}
+		return a;
+	}
+	
 	
 	/**
 	 * Constructor when no value but message to be routed by key
@@ -45,6 +53,6 @@ public class Message {
 		this.srcNode = src;
 		this.hops = level;
 		this.key = key;
-		this.str_key = Long.toString(key,Node.base);
+		this.str_key = correctSize(Long.toString(key,Node.base));
 	}
 }
