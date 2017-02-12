@@ -1,6 +1,9 @@
 package simulater;
 
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.Random;
 import java.util.Vector;
 import java.util.UUID;
@@ -12,7 +15,7 @@ import dht1.Pair;
 public class Simulater {
 	Vector <Node> n_list = new Vector<Node>();
 	boolean override = false;		//to decide and override the commands
-	int max_nodes=16;				//max allowed nodes in the network
+	int max_nodes=64;				//max allowed nodes in the network
 	int min_nodes=2;				//min nodes in the network to prevent deleting
 	boolean auto=false;				// todo  add functions like auto csimulate vs user input
 	
@@ -24,6 +27,13 @@ public class Simulater {
 		String line=null;
 		byte[] inp_bytes = new byte[2048];
 		int num_bytes;
+		File file = new File("node_vs_hops.txt");
+        if (!file.exists()) {
+             file.createNewFile();
+        }
+        FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+        BufferedWriter bw = new BufferedWriter(fw);
+        Node.bw = bw;
 		
 		while (true){
 			if(System.in.available()>0){
@@ -41,6 +51,7 @@ public class Simulater {
 						System.out.println("Simulator: User entered: "+line);
 						if("end".equals(line)){
 				    		System.out.println("Simulator: Ending Simulations");
+				    		bw.close();
 				    		System.exit(0);
 				    	}
 						line = null;
@@ -57,6 +68,7 @@ public class Simulater {
 				if(r<frac1){
 					//add a new node
 					addNode();
+					Node.incrementNodes();
 					curr_thread.sleep(500);
 					for(int i=0;i<n_list.size();i++){
 						if(n_list.get(i) == null){continue;}
@@ -65,6 +77,7 @@ public class Simulater {
 				}else if(r<frac2+frac1){
 					//delete a node
 					deleteNode();
+					Node.decrementNodes();
 				}else{
 //				}else if(r<2*frac2+ frac1){
 					//lookup add or delete a key

@@ -1,5 +1,7 @@
 package dht1;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Vector;
@@ -18,6 +20,7 @@ public class Node implements Runnable{
 	public static int rows = (int) Math.ceil(key_size/Node.b);	//# of rows in routing table
 	public static int addr_range = 100;							//size of 2-D sq. array where each entry serves as public addr
 	private static int num_nodes = 0;							//field to store number of nodes in the network
+	public static BufferedWriter bw=null;
 	
 	// Node State, maintained at each node
 	public Pair<Integer,Integer> public_addr = null;		//public_id (ip) of the node
@@ -64,6 +67,18 @@ public class Node implements Runnable{
         }
     }
     
+    public synchronized boolean writeOut(String line){
+    	if(bw==null){return false;}
+    	try {
+			bw.write(line + "\n");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+//			e.printStackTrace();
+			System.out.println(this.node_id+": Panic: Output file closed or not-available");
+		}
+    	return true;
+    }
+    
     /**
      * Initializing node before it starts to function
      * Sets the current thread, str_node_id, self entries in routing table etc.
@@ -71,7 +86,7 @@ public class Node implements Runnable{
     public void start(){
     	this.th = Thread.currentThread();
         this.str_node_id = Long.toString(this.node_id,Node.base);
-        while(this.str_node_id.length()<(key_size/b)){
+        while(this.str_node_id.length()<(Node.key_size/Node.b)){
         	this.str_node_id = '0'+this.str_node_id;
         }
         if(this.known==null){
@@ -92,8 +107,8 @@ public class Node implements Runnable{
 
         // if not the 1st Node to join the network
         if(known!=null){
-        	Message m = new Message("join",0,this,this.node_id);		// key doesn't matter Message(type,hops,srcNode);
-        	this.known.addMessage(m);					//X sent a join message to A (X,A as referenced in paper)
+        	Message m = new Message("join",0,this,this.node_id);	// key doesn't matter Message(type,hops,srcNode);
+        	this.known.addMessage(m);								//X sent a join message to A (X,A as referenced in paper)
         	this.updateNeighbourSet(known);
         }
     }
@@ -116,9 +131,8 @@ public class Node implements Runnable{
     		if(msg==null){
     			continue;
     		}
-    		
 
-    		if(msg.hops!=-1){							//new lookup or addKey or deleteKey msg being added
+    		if(msg.hops!=-1){							//not a new lookup or addKey or deleteKey msg 
     			System.out.println(this.node_id +": Received message-> type:"+ msg.type +" src:"+msg.srcNode.node_id+" key:"+msg.key+" ("+msg.str_key+")");
     		}
     		
@@ -128,6 +142,7 @@ public class Node implements Runnable{
                 	f = route(msg);
                 	if(f){
                 		m = new Message("lastinfo",msg.hops,this);	//direct message, so key doesn't matter
+                		this.writeOut(Node.num_nodes+", "+msg.hops);
                 	}else{
                 		m = new Message("info",msg.hops,this);		//direct message, so key doesn't matter
                 	}
@@ -156,6 +171,7 @@ public class Node implements Runnable{
                 			//subtract a hop not needed since simulator send with -1
                 			m = new Message("lookup_reply",msg.hops,this,msg.key,val);		
                 			msg.srcNode.addMessage(m);
+                			this.writeOut(Node.num_nodes+", "+msg.hops);
                 		}
                 	}else{
                 		//chill, you already forwarded it in route :-P
@@ -172,6 +188,7 @@ public class Node implements Runnable{
                 		store.add(msg.key, msg.value);
                 		System.out.println(this.node_id+": Added key: "+msg.key+" value: "+msg.value+
                 							" as requested by node: "+msg.srcNode.node_id);
+                		this.writeOut(Node.num_nodes+", "+msg.hops);
                 	}
                 	break;
                 case "send_key_val":
@@ -186,6 +203,7 @@ public class Node implements Runnable{
                 		String val = store.remove(msg.key);
                 		System.out.println(this.node_id+": Removed key: "+msg.key+" value: "+val +
     							" as requested by node: "+msg.srcNode.node_id);
+                		this.writeOut(Node.num_nodes+", "+msg.hops);
                 	}
                 	break;
                 case "delete":
@@ -273,7 +291,7 @@ public class Node implements Runnable{
     	}
     }
     
-    
+
     /**
      * Returns true if key->a > key->b
      * */
@@ -457,18 +475,13 @@ public class Node implements Runnable{
     	}
     }
     
+    
+    
     /**
      * Node 'n' is close to the current node. Use this to update my neigbourSet
      * NeigbourSet is arranged in the order of distances
      * */
     public void updateNeighbourSet(Node n){
-//    	this.n_set.add(n);
-//    	for(int i=0;i<n.n_set.size();i++){
-//    		if(this.n_set.size()>=M){
-//    			break;
-//    		}
-//			this.n_set.add(n.n_set.get(i));
-//    	}
     	//add at the correct index - only if not present
     	if(!this.n_set.contains(n) && this.node_id!=n.node_id){
     		double dist = dist_phy(this,n);
@@ -485,7 +498,7 @@ public class Node implements Runnable{
     		double dist = dist_phy(this,n.n_set.get(i));
     		int j=0;
     		for(;j<this.n_set.size();j++){
-    			if(this.n_set.get(j)!=null && dist < dist_phy(this,this.n_set.get(j))){
+    			if(dist < dist_phy(this,this.n_set.get(j))){
     				break;
     			}
     		}
@@ -496,6 +509,7 @@ public class Node implements Runnable{
 		}
     	return;
     }
+    
     
     /**
      * returns distance between two keys on the circle - from the shorter side
