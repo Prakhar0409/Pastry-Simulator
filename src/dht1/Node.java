@@ -13,13 +13,13 @@ public class Node implements Runnable{
 	//Configuration info for each Node in Pastry;
 	public static int b = 2;									//base of all keys is 2^b
 	public static int base = (int) Math.pow(2, b);				
-	public static int L = 4;									//size of leaf set
+	public static int L = 2;									//size of leaf set
 	public static int M = 2;									//size of neighbourhood set
 	public static int key_size = 16;							//in bits;
 	public static long max_nodes = (long) Math.pow(2,key_size);	//maximum Nodes possible in network
 	public static int rows = (int) Math.ceil(key_size/Node.b);	//# of rows in routing table
 	public static int addr_range = 100;							//size of 2-D sq. array where each entry serves as public addr
-	private static int num_nodes = 0;							//field to store number of nodes in the network
+	public static int num_nodes = 0;							//field to store number of nodes in the network
 	public static BufferedWriter bw=null;
 	
 	// Node State, maintained at each node
@@ -133,7 +133,7 @@ public class Node implements Runnable{
     		}
 
     		if(msg.hops!=-1){							//not a new lookup or addKey or deleteKey msg 
-    			System.out.println(this.node_id +": Received message-> type:"+ msg.type +" src:"+msg.srcNode.node_id+" key:"+msg.key+" ("+msg.str_key+")");
+    			System.out.println(this.node_id +": Received message-> type:"+ msg.type +" src:"+msg.srcNode.node_id+" key:"+msg.key);
     		}
     		
     		msg.hops+=1;							    			//increase hops
@@ -164,6 +164,7 @@ public class Node implements Runnable{
                 				//subtract 1 hop because lookup started by sending a msg from main thread to node.
                 				System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+
                 									". I had the key. No value. Hops: "+(msg.hops));
+                				this.writeOut(Node.num_nodes+", "+msg.hops);
                 			}
                 		}else{
                 			String val = store.get(msg.key);
@@ -171,7 +172,6 @@ public class Node implements Runnable{
                 			//subtract a hop not needed since simulator send with -1
                 			m = new Message("lookup_reply",msg.hops,this,msg.key,val);		
                 			msg.srcNode.addMessage(m);
-                			this.writeOut(Node.num_nodes+", "+msg.hops);
                 		}
                 	}else{
                 		//chill, you already forwarded it in route :-P

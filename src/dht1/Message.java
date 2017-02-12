@@ -21,8 +21,12 @@ public class Message {
 		this.type = type;
 		this.srcNode = src;
 		this.hops = hops;
-		this.key = -1;
-		this.str_key = this.srcNode.str_node_id;
+		this.key = -1;		
+		if(this.key==-1){
+			this.str_key = "-1";
+		}else{
+			this.str_key = correctSize(Long.toString(this.key,Node.base));
+		}
 	}
 	
 	/**
@@ -53,6 +57,10 @@ public class Message {
 		this.srcNode = src;
 		this.hops = level;
 		this.key = key;
-		this.str_key = correctSize(Long.toString(key,Node.base));
+		if(key==-1){
+			this.str_key = "-1";
+		}else{
+			this.str_key = correctSize(Long.toString(key,Node.base));
+		}
 	}
 }

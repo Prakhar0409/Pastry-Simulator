@@ -15,7 +15,7 @@ import dht1.Pair;
 public class Simulater {
 	Vector <Node> n_list = new Vector<Node>();
 	boolean override = false;		//to decide and override the commands
-	int max_nodes=64;				//max allowed nodes in the network
+	int max_nodes=32;				//max allowed nodes in the network
 	int min_nodes=2;				//min nodes in the network to prevent deleting
 	boolean auto=false;				// todo  add functions like auto csimulate vs user input
 	
