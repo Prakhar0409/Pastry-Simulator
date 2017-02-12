@@ -31,7 +31,7 @@ public class Simulater {
         if (!file.exists()) {
              file.createNewFile();
         }
-        FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+        FileWriter fw = new FileWriter(file.getAbsoluteFile());//, true);
         BufferedWriter bw = new BufferedWriter(fw);
         Node.bw = bw;
 		

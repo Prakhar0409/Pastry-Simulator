@@ -11,7 +11,7 @@ public class Node implements Runnable{
      * Implements a node of Pastry - a scalable, robust and resilient P2P protocol 
      */
 	//Configuration info for each Node in Pastry;
-	public static int b = 4;									//base of all keys is 2^b
+	public static int b = 2;									//base of all keys is 2^b
 	public static int base = (int) Math.pow(2, b);				
 	public static int L = 4;									//size of leaf set
 	public static int M = 2;									//size of neighbourhood set
