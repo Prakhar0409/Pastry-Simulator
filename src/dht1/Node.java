@@ -11,12 +11,13 @@ public class Node implements Runnable{
 	//Configuration info for each Node in Pastry;
 	public static int b = 4;									//base of all keys is 2^b
 	public static int base = (int) Math.pow(2, b);				
-	public static int L = 2;									//size of leaf set
+	public static int L = 4;									//size of leaf set
 	public static int M = 2;									//size of neighbourhood set
 	public static int key_size = 16;							//in bits;
 	public static long max_nodes = (long) Math.pow(2,key_size);	//maximum Nodes possible in network
 	public static int rows = (int) Math.ceil(key_size/Node.b);	//# of rows in routing table
 	public static int addr_range = 100;							//size of 2-D sq. array where each entry serves as public addr
+	private static int num_nodes = 0;							//field to store number of nodes in the network
 	
 	// Node State, maintained at each node
 	public Pair<Integer,Integer> public_addr = null;		//public_id (ip) of the node
@@ -73,7 +74,12 @@ public class Node implements Runnable{
         while(this.str_node_id.length()<(key_size/b)){
         	this.str_node_id = '0'+this.str_node_id;
         }
-        System.out.println(this.node_id+": Starting Node : "+ this.node_id+" ("+this.str_node_id+")");
+        if(this.known==null){
+        	System.out.println(this.node_id+": Starting Node : "+ this.node_id+" ("+this.str_node_id+") Known initially: none");
+        }else{
+        	System.out.println(this.node_id+": Starting Node : "+ this.node_id+" ("+this.str_node_id+") Known initially: "+this.known.node_id);
+        }
+        
         for(int i=0;i<Node.rows;i++){
     		int col = 0;
     		if(this.str_node_id.charAt(i)>='0' && this.str_node_id.charAt(i)<='9'){
@@ -86,7 +92,7 @@ public class Node implements Runnable{
 
         // if not the 1st Node to join the network
         if(known!=null){
-        	Message m = new Message("join",0,this);		// key doesn't matter Message(type,hops,srcNode);
+        	Message m = new Message("join",0,this,this.node_id);		// key doesn't matter Message(type,hops,srcNode);
         	this.known.addMessage(m);					//X sent a join message to A (X,A as referenced in paper)
         	this.updateNeighbourSet(known);
         }
@@ -111,7 +117,10 @@ public class Node implements Runnable{
     			continue;
     		}
     		
-			System.out.println(this.node_id +": Received message-> type:"+ msg.type +" src:"+msg.srcNode.node_id+" key:"+msg.key+" ("+msg.str_key+")");
+
+    		if(msg.hops!=-1){							//new lookup or addKey or deleteKey msg being added
+    			System.out.println(this.node_id +": Received message-> type:"+ msg.type +" src:"+msg.srcNode.node_id+" key:"+msg.key+" ("+msg.str_key+")");
+    		}
     		
     		msg.hops+=1;							    			//increase hops
             switch (msg.type) {
@@ -135,17 +144,17 @@ public class Node implements Runnable{
                 			if(store.get(msg.key)!=null){
                 				//subtract 1 hop because lookup started by sending a msg from main thread to node.
                 				System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+
-                									". I had the key. Value:"+store.get(msg.key)+" Hops: "+(msg.hops-1));
+                									". I had the key. Value:"+store.get(msg.key)+" Hops: "+(msg.hops));
                 			}else{
                 				//subtract 1 hop because lookup started by sending a msg from main thread to node.
                 				System.out.println(this.node_id+": Lookup reply for msg: "+msg.key+
-                									". I had the key. No value. Hops: "+(msg.hops-1));
+                									". I had the key. No value. Hops: "+(msg.hops));
                 			}
                 		}else{
                 			String val = store.get(msg.key);
                 			//Message(type,hops,src,key_to_which_this_is_reply,value of the key);		direct msg to the src
-                			//subtract a hop since the first lookup msg was from thread to node to simulate
-                			m = new Message("lookup_reply",msg.hops-1,this,msg.key,val);		
+                			//subtract a hop not needed since simulator send with -1
+                			m = new Message("lookup_reply",msg.hops,this,msg.key,val);		
                 			msg.srcNode.addMessage(m);
                 		}
                 	}else{
@@ -199,30 +208,45 @@ public class Node implements Runnable{
                 	System.out.println(this.node_id+": Sending new-node-update message to others nodes I know");
                 	for(int i=0;i<this.l_lset.size();i++){
                 		if(this.l_lset.get(i) != null){
-                			Message m1 = new Message("newnode_rl",this);
+                			Message m1 = new Message("newnode_rl",0,this,-1);	//direct msg
                 			this.l_lset.get(i).addMessage(m1);
                 		}
                 	}
                 	for(int i=0;i<this.r_lset.size();i++){
                 		if(this.r_lset.get(i) != null){
-                			Message m1 = new Message("newnode_ll",this);
+                			Message m1 = new Message("newnode_ll",0,this,-1);	//direct msg
                 			this.r_lset.get(i).addMessage(m1);
                 		}
                 	}
                 	for(int i=0;i<this.n_set.size();i++){
                 		if(this.n_set.get(i) != null){
-                			Message m1 = new Message("newnode_n",this);
+                			Message m1 = new Message("newnode_n",0,this,-1);	//direct msg
                 			this.n_set.get(i).addMessage(m1);
                 		}
                 	}
                 	for(int i=0;i<rows;i++){
                 		for(int j=0;j<base;j++){
                 			if(this.r_table[i][j]!=null && this.r_table[i][j].node_id!=this.node_id){	//preventing from nulls and self sends
-                				Message m1 = new Message("newnode_rt",this);
+                				Message m1 = new Message("newnode_rt",0,this,-1);	//direct msg
                 				this.r_table[i][j].addMessage(m1);
                 			}
                 		}
                 	}
+                	break;
+                case "request_neighbour_set":
+                	m = new Message("update_n",0,this,-1);	//direct msg reply
+                	msg.srcNode.addMessage(m);
+                	break;
+                case "request_leaf_set":
+                	m = new Message("update_leaf_set",0,this,-1);	//direct msg reply
+                	msg.srcNode.addMessage(m);
+                	break;
+                case "request_rtable":
+                	m = new Message("update_rtable",0,this,-1);	//direct msg reply
+                	msg.srcNode.addMessage(m);
+                	break;
+                case "update_leaf_set":
+                	this.updateLeafSet(msg.srcNode);
                 	break;
                 case "newnode_ll":
                 	this.updateLeafFromNewNode(msg.srcNode,msg);
@@ -234,10 +258,12 @@ public class Node implements Runnable{
                 	this.updateTables(msg.srcNode);
                 	this.updateNeighbourSet(msg.srcNode);
                 	break;
+                case "update_rtable":
                 case "newnode_rt":
                 	this.updateTables(msg.srcNode);
 //                	this.updateNeighbourSet(msg.srcNode);
                 	break;
+                case "update_n":
                 case "newnode_n":
                 	this.updateNeighbourSet(msg.srcNode);
                 	break;
@@ -271,6 +297,9 @@ public class Node implements Runnable{
      * Update the leaf sets of nodes that received a msg from the newly added node
      * */
     public void updateLeafFromNewNode(Node n,Message m){
+    	if(this.l_lset.contains(n) || this.r_lset.contains(n)){
+    		return;
+    	}
     	if(this.greaterThanForKeys(this.node_id,n.node_id)){	//if my.id > n.id then add n to lesser leaf set
     		//update to left leaf set
     		int i=0;
@@ -376,7 +405,7 @@ public class Node implements Runnable{
 //			this.n_set.add(n.n_set.get(i));
 //    	}
     	//add at the correct index - only if not present
-    	if(!this.n_set.contains(n)){
+    	if(!this.n_set.contains(n) && this.node_id!=n.node_id){
     		double dist = dist_phy(this,n);
     		int i=0;
     		for(;i<this.n_set.size();i++){
@@ -387,7 +416,7 @@ public class Node implements Runnable{
     		this.n_set.add(i,n);
     	}
     	for(int i=0;i<n.n_set.size();i++){
-    		if(this.n_set.contains(n.n_set.get(i))){continue;}
+    		if(this.n_set.contains(n.n_set.get(i)) || this.node_id==n.n_set.get(i).node_id){continue;}
     		double dist = dist_phy(this,n.n_set.get(i));
     		int j=0;
     		for(;j<this.n_set.size();j++){
@@ -441,6 +470,23 @@ public class Node implements Runnable{
         return len;
     }
     
+    public boolean liesInBetween(long smaller,long bigger,long search){
+    	if(smaller<bigger){
+    		if(smaller <= search && search <= bigger){
+    			return true;
+    		}
+    	}else{
+    		bigger += Node.max_nodes;
+    		if(search<smaller){
+    			search += Node.max_nodes;
+    		}
+    		if(smaller <= search && search <= bigger){
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    
     /**
      * This is the main routing logic. Takes a message and routes it to node with id closest 
      * to the key accessible from the current node position. 
@@ -461,7 +507,9 @@ public class Node implements Runnable{
     	}
     	System.out.println(this.node_id+ ": left_neigh:"+smallest+" right_neigh:"+greatest);
     	// if smallest == greatest => only 2 nodes in system and every keys falls in our range
-        if( smallest==greatest || (this.greaterThanForKeys(msg.key,smallest)  && this.greaterThanForKeys(greatest,msg.key))){
+        if( smallest==greatest || liesInBetween(smallest,greatest,msg.key)){
+        	// the below line used initially does wrong, eg. A-30K,B-31K,C-32K. Add a node at 27K
+        	//(this.greaterThanForKeys(msg.key,smallest)  && this.greaterThanForKeys(greatest,msg.key))){
             int where = 0;		//-1=left; 1=right
             long min_dist= dist_key(this.node_id, msg.key),tmp_dist;
             int min_idx=0;
@@ -483,7 +531,7 @@ public class Node implements Runnable{
             }
             if(where == 0){
                 // msg for you now return the answer
-                System.out.println(this.node_id+ ": Notification1:- Node closest to msg: "+msg.key+" of type: "+msg.type +" from: "+msg.srcNode.node_id);
+                System.out.println(this.node_id+ ": Notification1(in leafset range):- Node closest to msg: "+msg.key+" of type: "+msg.type +" from: "+msg.srcNode.node_id);
                 return true;
             }else if(where<0){
             	System.out.println(this.node_id+": msg:+"+msg.key +" Forwarded to:"+this.l_lset.get(min_idx).node_id);
@@ -604,56 +652,6 @@ public class Node implements Runnable{
         }
     }
     
-    public void printNodeState(Node n){
-    	System.out.println("######################################################################");
-    	System.out.println("Node id: "+n.node_id+" ("+n.str_node_id+")"+" - public_addr:"+n.public_addr.toString());
-    	System.out.println("Leaf Set");
-    	for(int i=0;i<n.l_lset.size();i++){
-    		if(n.l_lset.get(i)!=null){
-    			System.out.print(n.l_lset.get(i).node_id+", ");
-//    			System.out.print(n.l_lset.get(i).node_id+" ("+n.l_lset.get(i).str_node_id+"), ");
-    		}else{
-    			System.out.print("null, ");
-    		}
-    	}
-    	System.out.print(" || ");
-    	for(int i=0;i<n.r_lset.size();i++){
-    		if(n.r_lset.get(i)!=null){
-    			System.out.print(n.r_lset.get(i).node_id+", ");
-//    			System.out.print(n.r_lset.get(i).node_id+" ("+n.r_lset.get(i).str_node_id+"), ");
-    		}else{
-    			System.out.print("null, ");
-    		}
-    	}
-    	System.out.println();
-    	
-    	System.out.println("Neigbourhood Set");
-    	for(int i=0;i<n.n_set.size();i++){
-    		if(n.n_set.get(i)!=null){
-    			System.out.print(n.n_set.get(i).node_id+", ");
-//    			System.out.print(n.n_set.get(i).node_id+" ("+n.n_set.get(i).str_node_id+"), ");
-    		}else{
-    			System.out.print("null, ");
-    		}
-    	}
-    	System.out.println();
-    	System.out.println("Routing table");
-    	for(int j=0;j<base;j++){
-    		System.out.print(j+" \t\t");
-    	}
-    	System.out.println();
-    	for(int i=0;i<rows;i++){
-    		for(int j=0;j<base;j++){
-    			if(n.r_table[i][j]!=null){
-    				System.out.print(n.r_table[i][j].node_id+", \t");
-    			}else{
-        			System.out.print("null, \t");
-        		}
-    		}
-    		System.out.println();
-    	}
-    	System.out.println("**********************************************************************");
-    }
 
     /**
      * Others deleting a node from their state tables, leaf sets and neighbour sets
@@ -662,26 +660,48 @@ public class Node implements Runnable{
      * 3. delete from the routing tables;
      * */
     public void deleteNodeFromState(Message msg){
+    	Message m;
     	for(int i=0;i<this.n_set.size();i++){
     		if(this.n_set.get(i)!=null && this.n_set.get(i).node_id == msg.srcNode.node_id){
     			this.n_set.remove(i);
+    		}else{
+    			m = new Message("request_neighbour_set",0,this,-1);			//direct msg to a neighbour
+    			this.n_set.get(i).addMessage(m);
     		}
     	}
+    	
     	for(int i=0;i<this.l_lset.size();i++){
     		if(this.l_lset.get(i)!=null && this.l_lset.get(i).node_id == msg.srcNode.node_id){
     			this.l_lset.remove(i);
     		}
+    	}
+    	if(this.l_lset.size()>0){
+			m = new Message("request_leaf_set",0,this,-1);			//direct msg to a leaf
+			this.l_lset.get(0).addMessage(m);
     	}
     	for(int i=0;i<this.r_lset.size();i++){
     		if(this.r_lset.get(i)!=null && this.r_lset.get(i).node_id == msg.srcNode.node_id){
     			this.r_lset.remove(i);
     		}
     	}
-    	for(int i=0;i<rows;i++){
-    		for(int j=0;j<base;j++){
-    			if(this.r_table[i][j]!=null && this.r_table[i][j].node_id == msg.srcNode.node_id){
-        			this.r_table[i][j] = null;
-        		}
+    	if(this.r_lset.size()>0){
+			m = new Message("request_leaf_set",0,this,-1);			//direct msg to a leaf
+			this.r_lset.get(0).addMessage(m);
+    	}
+    	int l = this.sharedPrefix(this.node_id, msg.srcNode.node_id);
+    	m = new Message("request_rtable",0,this,-1);
+    	for(int i=0;i<l+1 && i<rows;i++){
+    		int col = 0;
+    		if(msg.srcNode.str_node_id.charAt(i)>='0' && msg.srcNode.str_node_id.charAt(i)<='9'){
+    			col = msg.srcNode.str_node_id.charAt(i) - '0';
+    		}else{
+    			col = msg.srcNode.str_node_id.charAt(i) - 'a'+10;
+    		}
+    		this.r_table[i][col] = null;
+    		for(int j=0;j<Node.base;j++){
+    			if(this.r_table[i][j]!=null){
+    				this.r_table[i][j].addMessage(m);
+    			}
     		}
     	}
     	return;
@@ -734,6 +754,78 @@ public class Node implements Runnable{
     		}
     	}
     	return;
+    }
+    
+    public void printNodeState(Node n){
+    	System.out.println("######################################################################");
+    	System.out.println("Node id: "+n.node_id+" ("+n.str_node_id+")"+" - public_addr:"+n.public_addr.toString());
+    	System.out.println("Leaf Set");
+    	for(int i=0;i<n.l_lset.size();i++){
+    		if(n.l_lset.get(i)!=null){
+    			System.out.print(n.l_lset.get(i).node_id+", ");
+//    			System.out.print(n.l_lset.get(i).node_id+" ("+n.l_lset.get(i).str_node_id+"), ");
+    		}else{
+    			System.out.print("null, ");
+    		}
+    	}
+    	System.out.print(" || ");
+    	for(int i=0;i<n.r_lset.size();i++){
+    		if(n.r_lset.get(i)!=null){
+    			System.out.print(n.r_lset.get(i).node_id+", ");
+//    			System.out.print(n.r_lset.get(i).node_id+" ("+n.r_lset.get(i).str_node_id+"), ");
+    		}else{
+    			System.out.print("null, ");
+    		}
+    	}
+    	System.out.println();
+    	
+    	System.out.println("Neigbourhood Set");
+    	for(int i=0;i<n.n_set.size();i++){
+    		if(n.n_set.get(i)!=null){
+    			System.out.print(n.n_set.get(i).node_id+", ");
+//    			System.out.print(n.n_set.get(i).node_id+" ("+n.n_set.get(i).str_node_id+"), ");
+    		}else{
+    			System.out.print("null, ");
+    		}
+    	}
+    	System.out.println();
+    	System.out.println("Routing table");
+    	for(int j=0;j<base;j++){
+    		System.out.print(j+" \t\t");
+    	}
+    	System.out.println();
+    	for(int i=0;i<rows;i++){
+    		for(int j=0;j<base;j++){
+    			if(n.r_table[i][j]!=null){
+    				System.out.print(n.r_table[i][j].node_id+", \t");
+    			}else{
+        			System.out.print("null, \t");
+        		}
+    		}
+    		System.out.println();
+    	}
+    	System.out.println("Data-store:");
+    	ArrayList<Long> key_set = this.store.getKeys();
+    	System.out.print("[ ");
+    	for(int i=0;i<key_set.size();i++){
+    		System.out.print(key_set.get(i)+":"+this.store.get(key_set.get(i))+", ");
+    	}
+    	System.out.println("]");
+    	System.out.println("**********************************************************************");
+    }
+    
+	/**
+     * Increment number of nodes in the network
+     * */
+	public static synchronized void incrementNodes() {
+        num_nodes++;
+    }
+    
+    /**
+     * Decrement number of nodes in the network
+     * */
+    public static synchronized void decrementNodes() {
+        num_nodes--;
     }
 
     /**

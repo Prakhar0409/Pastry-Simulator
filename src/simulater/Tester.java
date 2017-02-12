@@ -17,28 +17,38 @@ public class Tester {
 //		n.printNodeState(n);
 				
 		int iter=2;
-//		t.sleep(1000);
+		t.sleep(1000);
+		n.printNodeState(n);
 //		System.out.println("\n\n\n\n");
 //		System.out.println("Nodes: 1");
 		Node n1 = new Node(38798);
-		Node n2 = new Node(38799);
+		
+		
 		n1.known = n;
-		n2.known = n;
+		
 //		n1.public_addr = "10.208.1.99";
 		test.addNode(n1);
-		test.addNode(n2);
-//		t.sleep(500);
-		n.printNodeState(n);
-//		t.sleep(500);
-		n.printNodeState(n1);
-		n.printNodeState(n2);
-		
 		t.sleep(1000);
 		n.printNodeState(n);
+		n.printNodeState(n1);
+		
+		Node n2 = new Node(38799);
+		n2.known = n;
+		
+		test.addNode(n2);
+		
+		t.sleep(500);
+		n.printNodeState(n);
 //		t.sleep(500);
 		n.printNodeState(n1);
 		n.printNodeState(n2);
 		
+//		t.sleep(1000);
+//		n.printNodeState(n);
+////		t.sleep(500);
+//		n.printNodeState(n1);
+//		n.printNodeState(n2);
+//		
 //		t.sleep(1000);
 //		n1.self_delete = true;
 //		n1 = new Node();
@@ -49,14 +59,16 @@ public class Tester {
 //		t.sleep(1000);
 //		System.out.println("\n\n\n\n");
 //		System.out.println("Nodes: 2");
-//		Node n2 = new Node(3330);
-//		n2.known = n;
-////		n2.public_addr = "3.72.93.2";
-//		test.addNode(n2);
-//		t.sleep(500);
-//		n.printNodeState(n);
-//		n.printNodeState(n1);
-//		n.printNodeState(n2);
+		t.sleep(1000);
+		Node n3 = new Node(3330);
+		n3.known = n;
+//		n2.public_addr = "3.72.93.2";
+		test.addNode(n3);
+		t.sleep(500);
+		n.printNodeState(n);
+		n.printNodeState(n1);
+		n.printNodeState(n2);
+		n.printNodeState(n3);
 		while(true);
 	}
 	

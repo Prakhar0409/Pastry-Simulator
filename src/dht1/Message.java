@@ -14,25 +14,7 @@ public class Message {
 	int hops;		//used in case of "info" and "join" msg; counts hops
 	String value;	//used in case of a lookup reply
 	
-	public Message(String type,Node src){
-		this.type = type;
-		this.srcNode = src;
-		this.hops = 0;
-		if(this.type=="join"){
-			this.key = this.srcNode.node_id;
-			this.str_key = this.srcNode.str_node_id;
-		}
-	}
-	
-	public Message(String type,Node src,long key){
-		this.type = type;
-		this.srcNode = src;
-		this.hops = 0;
-		this.key = key;
-		this.str_key = Long.toString(key,Node.base);
-	}
-	
-	/*
+	/**
 	 * Constructor for message when `key` is not necessary: Put key as -1;
 	 * */
 	public Message(String type,int hops,Node src){
@@ -43,6 +25,9 @@ public class Message {
 		this.str_key = this.srcNode.str_node_id;
 	}
 	
+	/**
+	 * Constructor when message carries the key:value tuples
+	 * */
 	public Message(String type,int hops,Node src,long key,String val){
 		this.type = type;
 		this.hops = hops;
@@ -52,7 +37,9 @@ public class Message {
 		this.value = val;
 	}
 	
-	
+	/**
+	 * Constructor when no value but message to be routed by key
+	 * */
 	public Message(String type,int level,Node src,long key){
 		this.type = type;
 		this.srcNode = src;
